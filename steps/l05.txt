@@ -9,12 +9,12 @@ GOAL: Partition a fake 300 MB disk with MBR, then switch it to GPT.
   $ echo $DISK1
   You should see:
     /dev/loop0 (or another loop number)
-  Why: If it prints nothing, run the storage setup from the Setup tab.
+  Why: If it prints nothing, run: sudo bash ~/labkit/u1-disks.sh
 
 --- Step 2: See all disks. Spot your real disk vs the fake loop disks.
   $ lsblk
   You should see:
-    Your real disk (sda/vda) plus loop0–loop4, each 300M.
+    Your real disk (nvme0n1, xvda, sda or vda) plus loop0–loop4, each 300M. You may also see small snap loop devices; ignore those.
   Why: Never run fdisk on the real disk. Always use $DISK1.
 
 --- Step 3: Check DISK1. It has no partitions yet.
@@ -84,7 +84,7 @@ GOAL: Partition a fake 300 MB disk with MBR, then switch it to GPT.
     major minor #blocks name ... includes your loop partitions
 
 STUCK?
-  * $DISK1 is empty: Run: source /tmp/disks.env. If that file is missing, run the storage setup again.
+  * $DISK1 is empty: Run: source /tmp/disks.env. If that file is missing, run: sudo bash ~/labkit/u1-disks.sh
   * Typed a wrong key in fdisk: Press q and Enter. Nothing is saved until you press w.
   * Partition not showing in lsblk: sudo partprobe $DISK1
   * Device or resource busy: Something is mounted on it. Run sudo umount on it first.

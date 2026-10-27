@@ -1,6 +1,6 @@
 #!/bin/bash
 # Linux+ Unit 2 lab setup — creates FAKE practice data in ~/linuxlab2
-# Run as your normal user (no sudo):  bash u2.sh
+# Run as your normal user (no sudo):  bash ~/labkit/u2.sh
 # Safe to run again anytime to reset.
 
 L2="$HOME/linuxlab2"

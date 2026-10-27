@@ -1,11 +1,11 @@
 #!/bin/bash
 # Linux+ Unit 1 STORAGE lab setup — creates 5 FAKE disks (image files)
 # and attaches them as loop devices. Nothing touches your real disk.
-# Run with:  sudo bash u1-disks.sh
+# Run with:  sudo bash ~/labkit/u1-disks.sh
 # ONLY run this in a throwaway lab VM (never your own computer)
 
 if [ "$EUID" -ne 0 ]; then
-  echo "Run me with sudo:  sudo bash u1-disks.sh"; exit 1
+  echo "Run me with sudo:  sudo bash ~/labkit/u1-disks.sh"; exit 1
 fi
 
 # Install the tools the labs need (Ubuntu/Debian/Kali). Safe to re-run.

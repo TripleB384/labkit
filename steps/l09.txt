@@ -57,7 +57,7 @@ GOAL: Break a filesystem by running out of inodes, compare link types, and grow 
   You should see:
     Hard link still shows the data.
     cat: cust-soft.csv: No such file or directory
-  Why: Rerun the lab setup later to get customers.csv back.
+  Why: Get customers.csv back later with: bash ~/labkit/u1.sh
 
 --- Step 8: Check the inode details.
   $ stat cust-hard.csv
@@ -99,9 +99,12 @@ GOAL: Break a filesystem by running out of inodes, compare link types, and grow 
     tmpfs  tmpfs  50M  0  50M  0%  /mnt/ram
 
 --- Step 13: Clean up everything and reset your files.
-    (Setup tab: run the storage cleanup, then the text lab setup again)
+  $ cd ~
+  $ sudo bash ~/labkit/u1-clean.sh
+  $ bash ~/labkit/u1.sh
   You should see:
-    Storage lab cleaned up. Lab ready in ~/linuxlab
+    Storage lab cleaned up ...
+    Lab ready in /home/<you>/linuxlab
 
 STUCK?
   * mkfs.xfs: appears to contain an existing filesystem: Add -f to force it.

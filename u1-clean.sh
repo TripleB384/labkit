@@ -1,5 +1,5 @@
 #!/bin/bash
-# Undo everything from the storage labs. Run with: sudo bash u1-clean.sh
+# Undo everything from the storage labs. Run with: sudo bash ~/labkit/u1-clean.sh
 [ "$EUID" -ne 0 ] && { echo "Run with sudo"; exit 1; }
 
 # Remove any lab lines added to /etc/fstab (lesson 8)
@@ -21,4 +21,4 @@ for l in $(losetup -a | grep /root/disklab | cut -d: -f1); do
   losetup -d "$l"
 done
 rm -rf /root/disklab /tmp/disks.env
-echo "Storage lab cleaned up. Run u1-disks.sh again for a fresh start."
+echo "Storage lab cleaned up. Run: sudo bash ~/labkit/u1-disks.sh for a fresh start."

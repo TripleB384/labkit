@@ -138,7 +138,7 @@ GOAL: Clean up a messy fake company folder: find big, old and risky files, then 
     brw-rw---- ... /dev/sda or /dev/vda  (b = block)
 
 STUCK?
-  * No such file or directory: Run the Unit 2 lab setup from the Setup tab. It makes ~/linuxlab2.
+  * No such file or directory: Run the setup first: bash ~/labkit/u2.sh (it makes ~/linuxlab2).
   * find: missing argument to -exec: The command must end with \; (backslash, then semicolon).
   * locate: command not found: sudo apt install -y plocate, then sudo updatedb.
   * lsof: command not found: sudo apt install -y lsof

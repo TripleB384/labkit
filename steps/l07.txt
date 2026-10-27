@@ -74,6 +74,6 @@ STUCK?
   * Cannot use /dev/loopN: device is partitioned: That disk still has a partition table. Run: sudo wipefs -a $DISK2
   * $DISK2 is empty: source /tmp/disks.env
   * Volume group vg_lab not found: Check the spelling with sudo vgs. Or run the storage cleanup + setup and start this lab again.
-  * Want a fresh start: Run the storage cleanup, then the storage setup (Setup tab).
+  * Want a fresh start: sudo bash ~/labkit/u1-clean.sh, then sudo bash ~/labkit/u1-disks.sh
 
 BEFORE YOU LEAVE: Leave lv_data mounted. Lesson 8 uses it.

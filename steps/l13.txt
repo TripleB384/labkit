@@ -42,14 +42,14 @@ GOAL: Inspect, install, pin and remove packages, then stand up a real web server
     Canceled hold on cowsay.
 
 --- Step 6: Find where repos and keys are set.
-  $ ls /etc/apt/sources.list.d/
+  $ ls /etc/apt/sources.list /etc/apt/sources.list.d/
   $ ls /etc/apt/keyrings /usr/share/keyrings 2>/dev/null
-  $ grep -h "^URIs\|^Suites" /etc/apt/sources.list.d/ubuntu.sources
+  $ grep -rh "^deb \|^URIs" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null | head -3
   You should see:
-    ubuntu.sources (Ubuntu 24.04)
+    The repo list files
     Key files (.gpg / .asc)
-    URIs: http://archive.ubuntu.com/ubuntu/ ...
-  Why: On Ubuntu 22.04 the main list is /etc/apt/sources.list instead.
+    deb http://... ubuntu ... main restricted  (or URIs: ... on 24.04)
+  Why: Ubuntu 22.04 keeps the main list in /etc/apt/sources.list. 24.04 uses /etc/apt/sources.list.d/ubuntu.sources.
 
 --- Step 7: Switch the default editor with update-alternatives.
   $ update-alternatives --list editor

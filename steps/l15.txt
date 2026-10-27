@@ -8,7 +8,7 @@ GOAL: Pull, run, inspect, and build your own web container with Podman. Then do 
   $ sudo apt install -y podman
   $ podman --version
   You should see:
-    podman version 4.x or 5.x
+    podman version 3.4.x (Ubuntu 22.04) or 4.x / 5.x (newer)
 
 --- Step 2: Pull an image and list your images.
   $ podman pull docker.io/library/alpine
@@ -93,14 +93,18 @@ GOAL: Pull, run, inspect, and build your own web container with Podman. Then do 
     saved  (the first container is gone, the data isn't)
     The path on the host where it's stored.
 
---- Step 12: Create a network. Containers find each other by name.
+--- Step 12: Create a network and reach one container from another.
   $ podman network create poolnet
   $ podman run -d --name api --network poolnet docker.io/library/nginx:alpine
-  $ podman run --rm --network poolnet docker.io/library/alpine wget -qO- http://api | grep title
+  $ API_IP=$(podman inspect api --format '{{.NetworkSettings.Networks.poolnet.IPAddress}}')
+  $ echo $API_IP
+  $ podman run --rm --network poolnet docker.io/library/alpine wget -qO- http://$API_IP | grep title
   $ podman network ls
   You should see:
+    10.89.0.2 (or similar)
     <title>Welcome to nginx!</title>
-    NETWORK ID  NAME  DRIVER: podman (default), poolnet  bridge
+    poolnet  bridge
+  Why: Podman 4+ also lets you use the name: http://api. Podman 3.4 on Ubuntu 22.04 needs an extra plugin for names, so we use the IP.
 
 --- Step 13: Privileged vs unprivileged.
   $ podman run --rm docker.io/library/alpine mount -t tmpfs none /mnt

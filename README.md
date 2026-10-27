@@ -21,7 +21,11 @@ cd ~ && curl -sL https://github.com/TripleB384/labkit/archive/main.tar.gz | tar 
 
 Get the newest version later: `cd ~/labkit && git pull`
 
+Check the VM can run the labs: `bash ~/labkit/check.sh`
+
 ## Set up a lab
+
+Start with Unit 1 and go in order. Set up once per unit (run it again any time to reset):
 
 | Lessons | Command | What it makes |
 |---|---|---|

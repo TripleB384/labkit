@@ -88,6 +88,6 @@ GOAL: Move output and errors around using fake company files.
     HELLO LINUX
 
 STUCK?
-  * No such file or directory on cd: Run the lab setup from the Setup tab first.
+  * No such file or directory on cd: Run the setup first: bash ~/labkit/u1.sh
   * Stuck at a > prompt: The shell is waiting for your here-doc stop word. Type EOF alone on its own line (no spaces), or press Ctrl+C to cancel.
   * Wrong output in a file: Run the step again. A single > overwrites, so you get a clean file each time.

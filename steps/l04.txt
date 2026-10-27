@@ -48,7 +48,7 @@ GOAL: Inspect the hardware and drivers of a real Linux machine. Everything here 
   $ lspci -k | head -20
   You should see:
     Bridges, storage, and network controllers. 'Kernel driver in use:' lines.
-  Why: In a VM you'll see virtual hardware like Virtio or QEMU.
+  Why: In a VM you'll see virtual hardware. On an AWS cloud VM: Amazon Elastic Network Adapter and NVMe controllers. Others show Virtio or QEMU.
 
 --- Step 8: USB devices.
   $ lsusb
@@ -58,7 +58,7 @@ GOAL: Inspect the hardware and drivers of a real Linux machine. Everything here 
 --- Step 9: BIOS/DMI info (needs root).
   $ sudo dmidecode -t system | head -15
   You should see:
-    Manufacturer, Product Name, Serial Number (VMs show things like QEMU).
+    Manufacturer, Product Name, Serial Number (an AWS VM shows Amazon EC2; others show QEMU).
 
 --- Step 10: Full hardware summary.
   $ sudo lshw -short | head -20
