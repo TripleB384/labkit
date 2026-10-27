@@ -1,0 +1,158 @@
+LESSON 12: Processes & Jobs   (Linux+ objective 2.3)
+============================================================
+Setup needed first: bash ~/labkit/u2.sh
+
+GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them, and schedule a job.
+
+--- Step 1: Start the fake app in the background.
+  $ cd ~/linuxlab2
+  $ ./scripts/poolapp.sh &
+  $ jobs
+  $ echo $!
+  You should see:
+    [1]+  Running   ./scripts/poolapp.sh &
+    Then its PID.
+  Why: $! = PID of the last background job.
+
+--- Step 2: Find it three ways.
+  $ pgrep -a poolapp
+  $ ps aux | grep [p]oolapp
+  $ ps -o pid,ppid,stat,ni,comm -p $(pgrep poolapp)
+  You should see:
+    PID  PPID STAT NI COMMAND
+    1234 1200 S     0 poolapp.sh
+  Why: [p] keeps grep from matching itself. S = sleeping: it waits 5 seconds between writes.
+
+--- Step 3: See the family tree. Your shell is its parent.
+  $ pstree -p $$ | head -5
+  $ echo $$
+  You should see:
+    bash(1200)─┬─poolapp.sh(1234)───sleep(...)
+    $$ = your shell's PID, the same as the PPID above.
+
+--- Step 4: Read its live info in /proc.
+  $ grep -E "Name|State|PPid" /proc/$(pgrep poolapp)/status
+  $ ls -l /proc/$(pgrep poolapp)/cwd
+  You should see:
+    Name: poolapp.sh
+    State: S (sleeping)
+    PPid: 1200
+    cwd -> /home/<you>/linuxlab2
+
+--- Step 5: Start the CPU hog with a nice value of 10.
+  $ nice -n 10 ./scripts/cpuhog.sh &
+  $ sleep 2
+  $ ps -o pid,ni,pcpu,stat,comm -p $(pgrep cpuhog)
+  You should see:
+    PID   NI %CPU STAT COMMAND
+    1300  10 99.0 RN   cpuhog.sh
+  Why: R = running, N = low priority (nice).
+
+--- Step 6: renice it. Then try to make it MORE important without sudo.
+  $ renice -n 15 -p $(pgrep cpuhog)
+  $ renice -n 5 -p $(pgrep cpuhog)
+  $ sudo renice -n -5 -p $(pgrep cpuhog)
+  You should see:
+    old priority 10, new priority 15
+    renice: failed to set priority ...: Permission denied
+    old priority 15, new priority -5
+  Why: Normal users can only make a process nicer (higher number). Lowering needs root.
+
+--- Step 7: Watch it in top. Press P to sort by CPU, q to quit.
+  $ top
+  You should see:
+    cpuhog.sh near the top, about 100% CPU, NI = -5.
+
+--- Step 8: Pause it with a signal, check the state, resume.
+  $ kill -STOP $(pgrep cpuhog)
+  $ ps -o pid,stat,comm -p $(pgrep cpuhog)
+  $ kill -CONT $(pgrep cpuhog)
+  You should see:
+    STAT T  (T = stopped)
+
+--- Step 9: Kill it nicely (SIGTERM, the default).
+  $ kill $(pgrep cpuhog)
+  $ sleep 1
+  $ pgrep cpuhog || echo "cpuhog gone"
+  You should see:
+    cpuhog gone
+
+--- Step 10: Job control with Ctrl+Z, bg and fg.
+  $ ./scripts/cpuhog.sh
+    (press Ctrl+Z)
+  $ jobs
+  $ bg
+  $ jobs
+  $ fg
+    (press Ctrl+C)
+  You should see:
+    [2]+ Stopped ./scripts/cpuhog.sh
+    ...after bg: Running
+    fg brings it back. Ctrl+C ends it.
+
+--- Step 11: nohup + pkill, and see the signal list.
+  $ nohup ./scripts/cpuhog.sh > /dev/null 2>&1 &
+  $ pkill cpuhog
+  $ kill -l | head -2
+  You should see:
+     1) SIGHUP  2) SIGINT ... 9) SIGKILL ... 15) SIGTERM
+
+--- Step 12: Force-kill the fake app with signal 9.
+  $ kill -9 $(pgrep poolapp)
+  $ jobs
+  $ wc -l poolapp.log
+  You should see:
+    Killed  ./scripts/poolapp.sh
+    Then how many heartbeat lines it wrote.
+
+--- Step 13: Check limits, load and CPU stats.
+  $ ulimit -u
+  $ ulimit -n
+  $ uptime
+  $ sudo apt install -y sysstat
+  $ mpstat 1 1
+  You should see:
+    Max processes, then 1024 open files
+    load average: x, y, z (1, 5, 15 minutes)
+    mpstat: %usr %sys %idle ...
+
+--- Step 14: Spy on system calls with strace.
+  $ strace -c ls > /dev/null
+  You should see:
+    A table: % time, calls, syscall (read, openat, write ...)
+
+--- Step 15: Schedule a job every minute with cron.
+  $ (crontab -l 2>/dev/null; echo "* * * * * $HOME/linuxlab2/scripts/report.sh") | crontab -
+  $ crontab -l
+  You should see:
+    * * * * * /home/<you>/linuxlab2/scripts/report.sh
+
+--- Step 16: Wait 2 minutes, check, then remove it.
+  $ cat ~/linuxlab2/report.log
+  $ crontab -r
+  $ crontab -l
+  You should see:
+    2026-.. nightly report ran (one line per minute)
+    no crontab for <you>
+
+--- Step 17: Run a one-time job with at.
+  $ sudo apt install -y at
+  $ echo "$HOME/linuxlab2/scripts/report.sh" | at now + 1 minute
+  $ atq
+  You should see:
+    job 1 at ...
+    1  <date>  a  <you>
+
+--- Step 18: Look at the system schedules.
+  $ ls /etc/cron.d /etc/cron.daily
+  $ cat /etc/anacrontab
+  You should see:
+    Daily jobs like logrotate.
+    anacrontab lines: period delay job-id command.
+  Why: No /etc/anacrontab? sudo apt install -y anacron
+
+STUCK?
+  * pgrep finds nothing: The process already ended. Start it again.
+  * $(pgrep cpuhog) gives 2 PIDs: Two copies are running. Run pkill cpuhog and start one again.
+  * Terminal stuck / CPU fan loud: Press Ctrl+C. Or open a new terminal and run pkill cpuhog.
+  * at: command not found: sudo apt install -y at

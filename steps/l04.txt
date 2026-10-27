@@ -1,0 +1,89 @@
+LESSON 4: Devices, Modules & initrd   (Linux+ objective 1.2)
+============================================================
+Setup needed first: bash ~/labkit/u1.sh
+
+GOAL: Inspect the hardware and drivers of a real Linux machine. Everything here only reads, except the module load/unload.
+
+--- Step 1: List loaded modules and count them.
+  $ lsmod | head
+  $ lsmod | wc -l
+  You should see:
+    Columns: Module  Size  Used by
+    Then a number (often 50–150).
+
+--- Step 2: Get details on the first module in the list.
+  $ modinfo $(lsmod | awk 'NR==2{print $1}') | head
+  You should see:
+    filename:, description:, license:, depends: ...
+
+--- Step 3: Load a module with modprobe, check it, remove it.
+  $ sudo modprobe dummy
+  $ lsmod | grep dummy
+  $ sudo modprobe -r dummy
+  $ lsmod | grep dummy
+  You should see:
+    dummy shows up, then the last command prints nothing.
+  Why: If you get 'Module dummy not found', this machine doesn't ship it. Skip this step.
+
+--- Step 4: Do a dry run: what WOULD modprobe load?
+  $ modprobe -n -v dummy
+  You should see:
+    insmod /lib/modules/.../dummy.ko (or nothing if already built in)
+
+--- Step 5: CPU info two ways.
+  $ lscpu | head -15
+  $ grep -c processor /proc/cpuinfo
+  You should see:
+    Architecture: x86_64, CPU(s): N ...
+    Then the CPU count.
+
+--- Step 6: Memory info.
+  $ free -h
+  $ lsmem | tail -3
+  You should see:
+    Total/used/free RAM, then 'Total online memory'.
+
+--- Step 7: PCI devices and their drivers.
+  $ lspci
+  $ lspci -k | head -20
+  You should see:
+    Bridges, storage, and network controllers. 'Kernel driver in use:' lines.
+  Why: In a VM you'll see virtual hardware like Virtio or QEMU.
+
+--- Step 8: USB devices.
+  $ lsusb
+  You should see:
+    A list, or nothing at all in many VMs. Both are fine.
+
+--- Step 9: BIOS/DMI info (needs root).
+  $ sudo dmidecode -t system | head -15
+  You should see:
+    Manufacturer, Product Name, Serial Number (VMs show things like QEMU).
+
+--- Step 10: Full hardware summary.
+  $ sudo lshw -short | head -20
+  You should see:
+    A table: H/W path, Device, Class, Description
+
+--- Step 11: Read kernel messages, then search for errors.
+  $ sudo dmesg | tail -20
+  $ sudo dmesg | grep -i error
+  You should see:
+    Recent kernel lines with [timestamps]. The error search may be empty.
+
+--- Step 12: Find the kernel and initrd files in /boot.
+  $ uname -r
+  $ ls -lh /boot
+  You should see:
+    vmlinuz-<version> (kernel) and initrd.img-<version> (initrd) match uname -r.
+
+--- Step 13: Peek inside the initrd.
+  $ lsinitramfs /boot/initrd.img-$(uname -r) | head
+  You should see:
+    A list of files and drivers packed into the initrd.
+  Why: Ubuntu tool. On RHEL: lsinitrd. To rebuild on RHEL: dracut -f
+
+STUCK?
+  * command not found (lspci, lsusb, lshw, dmidecode): Install them: sudo apt install -y pciutils usbutils lshw dmidecode kmod
+  * Operation not permitted / Permission denied: Put sudo in front.
+  * lsinitramfs: no such file: Run ls /boot and use the initrd file name you see.

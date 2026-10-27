@@ -1,0 +1,93 @@
+LESSON 1: Redirection & Pipes   (Linux+ objective 1.5)
+============================================================
+Setup needed first: bash ~/labkit/u1.sh
+
+GOAL: Move output and errors around using fake company files.
+
+--- Step 1: Go into the lab folder and list the files.
+  $ cd ~/linuxlab && ls
+  You should see:
+    access.log  app.log  config  customers.csv  reports  scripts  servers.txt
+
+--- Step 2: Save the file list into listing.txt, then read it.
+  $ ls > listing.txt
+  $ cat listing.txt
+  You should see:
+    Same list, but listing.txt is in it too.
+  Why: Why? The shell creates listing.txt BEFORE ls runs.
+
+--- Step 3: Prove > overwrites and >> appends.
+  $ echo "first" > notes2.txt
+  $ echo "second" >> notes2.txt
+  $ cat notes2.txt
+  $ echo "third" > notes2.txt
+  $ cat notes2.txt
+  You should see:
+    first
+    second
+    ...then only:
+    third
+
+--- Step 4: Save ONLY the error from a bad command.
+  $ ls nosuchfile 2> errors.txt
+  $ cat errors.txt
+  You should see:
+    Nothing on screen at first. Then:
+    ls: cannot access 'nosuchfile': No such file or directory
+
+--- Step 5: Save normal output AND errors in one file.
+  $ ls customers.csv nosuchfile > both.txt 2>&1
+  $ cat both.txt
+  You should see:
+    ls: cannot access 'nosuchfile': No such file or directory
+    customers.csv
+
+--- Step 6: See the exam trap: put 2>&1 BEFORE the >.
+  $ ls customers.csv nosuchfile 2>&1 > trap.txt
+  $ cat trap.txt
+  You should see:
+    The error prints on screen.
+    trap.txt only has: customers.csv
+  Why: When 2>&1 ran, stdout still pointed at the screen. Order matters.
+
+--- Step 7: Throw errors in the trash, then check the exit code.
+  $ ls nosuchfile 2> /dev/null
+  $ echo $?
+  You should see:
+    2
+  Why: $? = exit code of the last command. 0 means success. Anything else means it failed.
+
+--- Step 8: Pipe errors from the log into tee: screen AND file.
+  $ grep ERROR app.log | tee errors-only.txt
+  $ wc -l errors-only.txt
+  You should see:
+    3 ERROR lines on screen, then:
+    3 errors-only.txt
+
+--- Step 9: Feed a file in with < and compare to normal.
+  $ wc -l < customers.csv
+  $ wc -l customers.csv
+  You should see:
+    13
+    13 customers.csv
+  Why: With < the command never sees the file name, so it can't print it.
+
+--- Step 10: Write a file with a here-doc. Type EOF alone on the last line.
+  $ cat << EOF > todo.txt
+  $ check pumps
+  $ call Ana
+  $ EOF
+  $ cat todo.txt
+  You should see:
+    check pumps
+    call Ana
+
+--- Step 11: Use a here-string.
+  $ tr a-z A-Z <<< "hello linux"
+  You should see:
+    HELLO LINUX
+
+STUCK?
+  * No such file or directory on cd: Run the lab setup from the Setup tab first.
+  * Stuck at a > prompt: The shell is waiting for your here-doc stop word. Type EOF alone on its own line (no spaces), or press Ctrl+C to cancel.
+  * Wrong output in a file: Run the step again. A single > overwrites, so you get a clean file each time.

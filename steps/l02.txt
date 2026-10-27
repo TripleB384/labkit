@@ -1,0 +1,109 @@
+LESSON 2: Text Tools & Regex   (Linux+ objective 1.5)
+============================================================
+Setup needed first: bash ~/labkit/u1.sh
+
+GOAL: Dig through a fake app log and customer list like a real admin.
+
+--- Step 1: Find every ERROR with its line number.
+  $ cd ~/linuxlab
+  $ grep -n ERROR app.log
+  You should see:
+    5:...ERROR db: connection refused
+    9:...ERROR api: POST /invoice 500
+    12:...ERROR disk: /var is 97% full
+
+--- Step 2: Count the warnings.
+  $ grep -c WARN app.log
+  You should see:
+    3
+
+--- Step 3: Search without caring about upper/lower case.
+  $ grep -i "DATABASE" app.log
+  You should see:
+    2 lines with 'connected to database'
+
+--- Step 4: Show everything that is NOT INFO, and count it.
+  $ grep -v INFO app.log
+  $ grep -v INFO app.log | wc -l
+  You should see:
+    The WARN and ERROR lines, then: 6
+
+--- Step 5: Use regex: lines that END with 'full'.
+  $ grep 'full$' app.log
+  You should see:
+    3 disk lines (81%, 88%, 97%)
+
+--- Step 6: Admin classic: show only real settings (no comments, no blank lines).
+  $ grep -v '^#' config/app.conf | grep -v '^$'
+  You should see:
+    port=8080
+    host=0.0.0.0
+    db_host=localhost
+    db_user=poolapp
+    debug=true
+    smtp_server=mail.example.com
+
+--- Step 7: Cut out the name and city columns.
+  $ cut -d, -f2,3 customers.csv | head -4
+  You should see:
+    name,city
+    Ana Reyes,Springfield
+    Ben Carter,Riverside
+    Carla Diaz,Springfield
+
+--- Step 8: Use awk: customers paying more than $100 (skip the header row).
+  $ awk -F, 'NR>1 && $5 > 100 {print $2, $5}' customers.csv
+  You should see:
+    Ana Reyes 149
+    Dev Patel 149
+    Iris Chen 149
+    Kim Nguyen 149
+
+--- Step 9: Use awk to add up monthly revenue.
+  $ awk -F, 'NR>1 {sum+=$5} END {print sum}' customers.csv
+  You should see:
+    1228
+
+--- Step 10: Replace text with sed. Then prove the file did NOT change.
+  $ sed 's/Basic/Starter/' customers.csv | head -3
+  $ grep -c Basic customers.csv
+  You should see:
+    Ben Carter shows 'Starter'
+    Then: 4  (file still says Basic)
+  Why: sed only prints the change. Add -i to actually edit the file.
+
+--- Step 11: See why uniq needs sort.
+  $ uniq servers.txt
+  $ sort servers.txt | uniq -c
+  You should see:
+    First: all 7 lines (nothing removed)
+    Then:
+      1 cache01
+      2 db01
+      1 web01
+      3 web02
+
+--- Step 12: Count customers per city, biggest first.
+  $ cut -d, -f3 customers.csv | tail -n +2 | sort | uniq -c | sort -rn
+  You should see:
+    5 Springfield
+    3 Riverside
+    2 Lakeside
+    2 Fairview
+
+--- Step 13: Find the busiest IP addresses in the web log.
+  $ awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -3
+  You should see:
+    4 10.0.0.5
+    3 192.168.1.20
+    2 10.0.0.7
+
+--- Step 14: Page through a file with less. Search, then quit.
+  $ less app.log
+  You should see:
+    Type /ERROR then Enter to jump to it. Press n for next. Press q to quit.
+
+STUCK?
+  * awk prints weird stuff: Use single quotes around the awk program: '...'. Double quotes let the shell eat $2.
+  * uniq didn't remove duplicates: They weren't next to each other. Pipe through sort first.
+  * Stuck inside less: Press q.

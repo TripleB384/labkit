@@ -1,0 +1,116 @@
+LESSON 13: Software & Packages   (Linux+ objective 2.4)
+============================================================
+Setup needed first: bash ~/labkit/u2.sh
+
+GOAL: Inspect, install, pin and remove packages, then stand up a real web server with your own page.
+
+--- Step 1: Refresh the package list.
+  $ sudo apt update
+  You should see:
+    Hit / Get lines ... Reading package lists... Done
+
+--- Step 2: Check a package before installing it.
+  $ apt-cache policy cowsay
+  $ apt show cowsay 2>/dev/null | grep -E "^(Package|Version|Depends)"
+  You should see:
+    Installed: (none)
+    Candidate: 3.x
+    Depends: libtext-charwidth-perl, perl:any
+
+--- Step 3: Install it and use it.
+  $ sudo apt install -y cowsay
+  $ /usr/games/cowsay "Pool Pros"
+  You should see:
+    A cow saying Pool Pros.
+
+--- Step 4: Ask dpkg about it.
+  $ dpkg -l cowsay
+  $ dpkg -L cowsay | head -5
+  $ dpkg -S /usr/bin/ls
+  You should see:
+    ii  cowsay ...  (ii = installed)
+    The files it installed
+    coreutils: /usr/bin/ls
+
+--- Step 5: Pin it so upgrades skip it, then release.
+  $ sudo apt-mark hold cowsay
+  $ apt-mark showhold
+  $ sudo apt-mark unhold cowsay
+  You should see:
+    cowsay set on hold.
+    cowsay
+    Canceled hold on cowsay.
+
+--- Step 6: Find where repos and keys are set.
+  $ ls /etc/apt/sources.list.d/
+  $ ls /etc/apt/keyrings /usr/share/keyrings 2>/dev/null
+  $ grep -h "^URIs\|^Suites" /etc/apt/sources.list.d/ubuntu.sources
+  You should see:
+    ubuntu.sources (Ubuntu 24.04)
+    Key files (.gpg / .asc)
+    URIs: http://archive.ubuntu.com/ubuntu/ ...
+  Why: On Ubuntu 22.04 the main list is /etc/apt/sources.list instead.
+
+--- Step 7: Switch the default editor with update-alternatives.
+  $ update-alternatives --list editor
+  $ sudo update-alternatives --config editor
+  You should see:
+    A numbered menu: nano, vim.basic ... Type a number and press Enter.
+
+--- Step 8: Install a real web server.
+  $ sudo apt install -y nginx
+  $ curl -s localhost | grep title
+  You should see:
+    <title>Welcome to nginx!</title>
+
+--- Step 9: Configure it: replace the home page.
+  $ ls /etc/nginx/sites-enabled
+  $ echo "<h1>Pool Pros on nginx</h1>" | sudo tee /var/www/html/index.html
+  $ curl -s localhost
+  You should see:
+    default
+    <h1>Pool Pros on nginx</h1>
+  Why: Config lives in /etc/nginx. Web files live in /var/www/html.
+
+--- Step 10: Check its config syntax (do this before every reload).
+  $ sudo nginx -t
+  You should see:
+    syntax is ok
+    test is successful
+
+--- Step 11: Remove vs purge.
+  $ sudo apt remove -y nginx nginx-common
+  $ dpkg -l | grep nginx
+  $ ls /etc/nginx
+  $ sudo apt purge -y nginx-common
+  $ ls /etc/nginx
+  You should see:
+    rc  nginx-common ...  (rc = removed, config left)
+    The config folder is still there.
+    After purge: ls: cannot access '/etc/nginx'
+
+--- Step 12: Clean up and look at sandboxed + language tools.
+  $ sudo apt purge -y cowsay
+  $ sudo apt autoremove -y
+  $ snap list
+  $ pip3 --version
+  You should see:
+    snap list shows snap apps (or 'command not found' on minimal installs). pip shows its version.
+
+--- Step 13: Read-only: the RHEL and SUSE versions. Just read these.
+    # RHEL / Rocky / Fedora
+  $ sudo dnf install httpd
+  $ rpm -qf /usr/sbin/httpd
+  $ sudo dnf install httpd --exclude=kernel*
+    # openSUSE
+  $ sudo zypper install apache2
+  $ sudo zypper addlock kernel-default
+  You should see:
+    Nothing to run on Ubuntu.
+  Why: Exam loves these: dnf = RHEL, zypper = SUSE, apt = Debian.
+
+STUCK?
+  * Could not get lock /var/lib/dpkg/lock: Another install is running (often auto-updates). Wait a minute and try again.
+  * Unable to locate package: Run sudo apt update first.
+  * curl: Failed to connect to localhost: nginx isn't running. sudo systemctl start nginx
+  * Address already in use (port 80): Something else uses port 80. Check: sudo lsof -i :80

@@ -1,0 +1,128 @@
+LESSON 15: Containers   (Linux+ objective 2.6)
+============================================================
+Setup needed first: bash ~/labkit/u2.sh
+
+GOAL: Pull, run, inspect, and build your own web container with Podman. Then do volumes, networks and the privileged test.
+
+--- Step 1: Install Podman.
+  $ sudo apt install -y podman
+  $ podman --version
+  You should see:
+    podman version 4.x or 5.x
+
+--- Step 2: Pull an image and list your images.
+  $ podman pull docker.io/library/alpine
+  $ podman images
+  You should see:
+    Writing manifest ... Storing signatures
+    REPOSITORY  TAG  IMAGE ID  CREATED  SIZE
+    docker.io/library/alpine  latest  ...  ~8 MB
+  Why: Full names (docker.io/library/...) skip Podman's 'which registry?' question.
+
+--- Step 3: Run a throwaway container. It shares YOUR kernel.
+  $ podman run --rm docker.io/library/alpine cat /etc/os-release
+  $ uname -r
+  $ podman run --rm docker.io/library/alpine uname -r
+  You should see:
+    NAME="Alpine Linux" ...
+    The same kernel version both times.
+  Why: Different distro inside, same kernel. That's the container vs VM difference.
+
+--- Step 4: Run a web server in the background with a port map.
+  $ podman run -d --name web -p 8080:80 docker.io/library/nginx:alpine
+  $ podman ps
+  $ curl -s localhost:8080 | grep title
+  You should see:
+    CONTAINER ID  IMAGE ... PORTS 0.0.0.0:8080->80/tcp  NAMES web
+    <title>Welcome to nginx!</title>
+
+--- Step 5: Logs, exec and inspect.
+  $ podman logs web | tail -3
+  $ podman exec web cat /etc/nginx/conf.d/default.conf | head -5
+  $ podman inspect web --format '{{.State.Status}} {{.NetworkSettings.Ports}}'
+  You should see:
+    nginx access lines (from your curl)
+    server { listen 80; ...
+    running map[80/tcp:[{0.0.0.0 8080}]]
+
+--- Step 6: Get a shell inside, look around, leave.
+  $ podman exec -it web sh
+  $ ps
+  $ exit
+  You should see:
+    A / # prompt. ps shows only nginx processes. exit returns you to the host.
+
+--- Step 7: Stop, start and see stopped containers.
+  $ podman stop web
+  $ podman ps
+  $ podman ps -a
+  $ podman start web
+  You should see:
+    ps is empty. ps -a shows web as Exited. Then it's running again.
+
+--- Step 8: Build your own image from the Containerfile.
+  $ cd ~/linuxlab2/container
+  $ cat Containerfile
+  $ podman build -t poolsite:1.0 .
+  $ podman images | grep poolsite
+  You should see:
+    STEP 1/4: FROM ... STEP 2/4: COPY ...
+    Successfully tagged localhost/poolsite:1.0
+
+--- Step 9: Run your image, then tag it as latest.
+  $ podman run -d --name pool -p 8081:80 poolsite:1.0
+  $ curl -s localhost:8081
+  $ podman tag poolsite:1.0 poolsite:latest
+  $ podman images | grep poolsite
+  You should see:
+    <h1>Pool Pros - running in a container</h1>
+    Two tags, SAME image ID.
+  Why: A tag is just another name for the same image.
+
+--- Step 10: Pass an environment variable.
+  $ podman run --rm -e SHOP=PoolPros docker.io/library/alpine sh -c 'echo Hello from $SHOP'
+  You should see:
+    Hello from PoolPros
+
+--- Step 11: A named volume outlives its container.
+  $ podman volume create pooldata
+  $ podman run --rm -v pooldata:/data docker.io/library/alpine sh -c 'echo saved > /data/f.txt'
+  $ podman run --rm -v pooldata:/data docker.io/library/alpine cat /data/f.txt
+  $ podman volume inspect pooldata --format '{{.Mountpoint}}'
+  You should see:
+    saved  (the first container is gone, the data isn't)
+    The path on the host where it's stored.
+
+--- Step 12: Create a network. Containers find each other by name.
+  $ podman network create poolnet
+  $ podman run -d --name api --network poolnet docker.io/library/nginx:alpine
+  $ podman run --rm --network poolnet docker.io/library/alpine wget -qO- http://api | grep title
+  $ podman network ls
+  You should see:
+    <title>Welcome to nginx!</title>
+    NETWORK ID  NAME  DRIVER: podman (default), poolnet  bridge
+
+--- Step 13: Privileged vs unprivileged.
+  $ podman run --rm docker.io/library/alpine mount -t tmpfs none /mnt
+  $ podman run --rm --privileged docker.io/library/alpine sh -c 'mount -t tmpfs none /mnt && echo MOUNTED'
+  You should see:
+    mount: permission denied (are you root?)
+    MOUNTED
+  Why: --privileged hands out extra powers. Avoid it unless you truly need it.
+
+--- Step 14: Clean up with prune.
+  $ podman rm -f web pool api
+  $ podman network rm poolnet
+  $ podman volume rm pooldata
+  $ podman image prune -a -f
+  $ podman ps -a
+  $ podman images
+  You should see:
+    Both lists are empty (or nearly).
+
+STUCK?
+  * Error pulling: Forbidden / connection refused: The registry is blocked on this network. You can still do the build lab with a local base: sudo apt install -y busybox-static, then use FROM scratch and COPY /bin/busybox.
+  * Port 8080 already in use: Pick another: -p 8090:80
+  * Error: name 'web' is already in use: Remove the old one: podman rm -f web
+  * 'short-name' prompt asks which registry: Pick docker.io, or always use full names like docker.io/library/alpine.
+  * Want Docker instead?: Same commands work: sudo apt install -y docker.io, then sudo docker ... instead of podman ...

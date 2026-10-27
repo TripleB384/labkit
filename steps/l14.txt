@@ -1,0 +1,141 @@
+LESSON 14: systemd   (Linux+ objective 2.5)
+============================================================
+Setup needed first: bash ~/labkit/u2.sh
+
+GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and replace a cron job with a timer.
+
+--- Step 1: Look at systemd itself.
+  $ ps -p 1 -o pid,comm
+  $ systemctl get-default
+  $ systemctl list-units --type=service --state=running | head
+  You should see:
+    1 systemd
+    multi-user.target or graphical.target
+    A list: cron.service, ssh.service ...
+
+--- Step 2: Check a service that's already there.
+  $ systemctl status cron --no-pager
+  $ systemctl is-enabled cron
+  $ systemctl is-active cron
+  You should see:
+    ● cron.service ... Active: active (running)
+    enabled
+    active
+
+--- Step 3: Read the unit file made for the fake app.
+  $ cd ~/linuxlab2
+  $ cat units/poolapp.service
+  You should see:
+    [Unit] Description ...
+    [Service] ExecStart=/home/<you>/linuxlab2/scripts/poolapp.sh, Restart=on-failure
+    [Install] WantedBy=multi-user.target
+
+--- Step 4: Install it, tell systemd, start it.
+  $ sudo cp units/poolapp.service /etc/systemd/system/
+  $ sudo systemctl daemon-reload
+  $ sudo systemctl start poolapp
+  $ systemctl status poolapp --no-pager
+  You should see:
+    Active: active (running)
+    Main PID: 2345 (poolapp.sh)
+
+--- Step 5: Check that it's working.
+  $ sleep 6; tail -3 poolapp.log
+  You should see:
+    HH:MM:SS poolapp heartbeat (new lines every 5 seconds)
+
+--- Step 6: Enable it at boot.
+  $ sudo systemctl enable poolapp
+  $ systemctl is-enabled poolapp
+  You should see:
+    Created symlink /etc/systemd/system/multi-user.target.wants/poolapp.service → ...
+    enabled
+  Why: Enable = a symlink in the target's .wants folder. That's all it is.
+
+--- Step 7: Crash it on purpose. Restart=on-failure brings it back.
+  $ systemctl show poolapp -p MainPID
+  $ sudo kill -9 $(pgrep poolapp)
+  $ sleep 2
+  $ systemctl show poolapp -p MainPID
+  $ sudo journalctl -u poolapp -n 5 --no-pager
+  You should see:
+    MainPID= changes to a NEW number.
+    The journal says: Main process exited, code=killed, status=9/KILL ... Scheduled restart job
+
+--- Step 8: Mask it, try to start it, unmask.
+  $ sudo systemctl stop poolapp
+  $ sudo systemctl mask poolapp
+  $ sudo systemctl start poolapp
+  $ sudo systemctl unmask poolapp
+  You should see:
+    Created symlink ... → /dev/null
+    Failed to start poolapp.service: Unit poolapp.service is masked.
+    Removed ...
+
+--- Step 9: Add an override with systemctl edit.
+  $ sudo systemctl edit poolapp
+  You should see:
+    An editor opens. Between the comment lines that say to add content, type:
+    [Service]
+    Restart=always
+    Then save and exit (nano: Ctrl+O, Enter, Ctrl+X).
+  Why: systemd saves it as /etc/systemd/system/poolapp.service.d/override.conf
+
+--- Step 10: Confirm the override.
+  $ systemctl cat poolapp
+  $ systemctl show poolapp -p Restart
+  You should see:
+    The main file, then # /etc/systemd/system/poolapp.service.d/override.conf
+    Restart=always
+
+--- Step 11: Replace a cron job with a timer.
+  $ sudo cp units/poolreport.service units/poolreport.timer /etc/systemd/system/
+  $ sudo systemctl daemon-reload
+  $ sudo systemctl enable --now poolreport.timer
+  $ systemctl list-timers | grep pool
+  You should see:
+    NEXT ... LEFT ... poolreport.timer  poolreport.service
+
+--- Step 12: Wait a minute, then check that it ran.
+  $ cat report.log
+  $ sudo journalctl -u poolreport -n 3 --no-pager
+  You should see:
+    ... nightly report ran
+    Started poolreport.service ... Finished ...
+
+--- Step 13: Boot speed and the *ctl tools.
+  $ systemd-analyze
+  $ systemd-analyze blame | head -5
+  $ hostnamectl
+  $ timedatectl
+  $ resolvectl status | head -8
+  $ sysctl net.ipv4.ip_forward
+  You should see:
+    Startup finished in ...
+    The slowest services first
+    Static hostname, OS, Kernel
+    Time zone, NTP service: active
+    DNS servers
+    net.ipv4.ip_forward = 0
+
+--- Step 14: Logs: errors since boot, then follow live.
+  $ sudo journalctl -b -p err --no-pager | tail -5
+  $ sudo journalctl -u poolapp -f
+    (press Ctrl+C to stop)
+  You should see:
+    Recent errors (if any). Then live heartbeat start/stop lines.
+
+--- Step 15: Clean up.
+  $ sudo systemctl disable --now poolapp poolreport.timer
+  $ sudo rm -r /etc/systemd/system/poolapp.service /etc/systemd/system/poolapp.service.d /etc/systemd/system/poolreport.*
+  $ sudo systemctl daemon-reload
+  $ systemctl status poolapp
+  You should see:
+    Removed ... symlinks
+    Unit poolapp.service could not be found.
+
+STUCK?
+  * Failed to start: Unit not found: Did you run sudo systemctl daemon-reload after copying the file?
+  * status shows 'failed' with code=exited, status=203/EXEC: The script path is wrong or not executable. Rerun the Unit 2 setup, then copy the unit file again.
+  * Stuck in the systemctl edit editor: nano: Ctrl+X, then Y to save. vim: Esc, then :wq
+  * System has not been booted with systemd: You're in a container or WSL1. Use a full Linux VM.

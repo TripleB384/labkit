@@ -1,0 +1,143 @@
+LESSON 11: Users & Groups   (Linux+ objective 2.2)
+============================================================
+Setup needed first: bash ~/labkit/u2.sh
+
+GOAL: Onboard 3 fake employees, set password rules, then lock and remove accounts like an IT admin.
+
+--- Step 1: Start with who YOU are.
+  $ whoami
+  $ id
+  $ groups
+  You should see:
+    Your username, then uid=1000(you) gid=1000(you) groups=...,sudo,...
+
+--- Step 2: Look at the new-hire list and make 2 groups.
+  $ cd ~/linuxlab2
+  $ cat newhires.csv
+  $ sudo groupadd sales
+  $ sudo groupadd support
+  $ getent group sales support
+  You should see:
+    4 people: areyes, bcarter, cdiaz, dpatel
+    sales:x:1001:
+    support:x:1002:  (numbers may differ)
+
+--- Step 3: Create Ana with a home, full name, shell and group.
+  $ sudo useradd -m -c "Ana Reyes" -s /bin/bash -G sales areyes
+  $ id areyes
+  $ getent passwd areyes
+  You should see:
+    uid=1001(areyes) gid=1003(areyes) groups=1003(areyes),1001(sales)
+    areyes:x:1001:1003:Ana Reyes:/home/areyes:/bin/bash
+
+--- Step 4: Give her a password, then look at the hash.
+  $ echo "areyes:Pool2026!" | sudo chpasswd
+  $ sudo grep areyes /etc/shadow | cut -c1-40
+  You should see:
+    areyes:$y$j9T$...  ($y$ = yescrypt hash)
+  Why: chpasswd sets passwords without the prompt. Fine for practice, never with real passwords.
+
+--- Step 5: Add both support people in one loop from the CSV.
+  $ grep support newhires.csv | while IFS=, read u name dept; do sudo useradd -m -c "$name" -G "$dept" "$u"; done
+  $ getent group support
+  You should see:
+    support:x:1002:bcarter,cdiaz
+
+--- Step 6: The -aG vs -G trap. Add Ben to sales the right way.
+  $ sudo usermod -aG sales bcarter
+  $ id bcarter
+  You should see:
+    groups=...(bcarter),...(support),...(sales)  (kept support, added sales)
+
+--- Step 7: Now do it the WRONG way to Carla.
+  $ sudo usermod -G sales cdiaz
+  $ id cdiaz
+  You should see:
+    groups=...(cdiaz),...(sales)  (support is GONE)
+  Why: Without -a, -G replaces the list. Fix: sudo usermod -aG support cdiaz
+
+--- Step 8: Lock Ana, check the status, unlock.
+  $ sudo passwd -l areyes
+  $ sudo passwd -S areyes
+  $ sudo grep areyes /etc/shadow | cut -c1-12
+  $ sudo passwd -u areyes
+  $ sudo passwd -S areyes
+  You should see:
+    areyes L ...  (L = locked)
+    areyes:!$y$j  (the ! blocks the password)
+    areyes P ...  (P = usable password)
+
+--- Step 9: Set password aging for Ana.
+  $ sudo chage -M 90 -W 7 areyes
+  $ sudo chage -d 0 areyes
+  $ sudo chage -l areyes
+  You should see:
+    Last password change : password must be changed
+    Maximum number of days ... : 90
+    Number of days of warning ... : 7
+
+--- Step 10: Make Ben's account expire at the end of the year.
+  $ sudo chage -E 2026-12-31 bcarter
+  $ sudo chage -l bcarter | grep "Account expires"
+  You should see:
+    Account expires : Dec 31, 2026
+
+--- Step 11: Block Carla from logging in at all.
+  $ sudo usermod -s /usr/sbin/nologin cdiaz
+  $ getent passwd cdiaz
+  $ sudo su - cdiaz
+  You should see:
+    ...:/home/cdiaz:/usr/sbin/nologin
+    This account is currently not available.
+
+--- Step 12: Add a welcome file to /etc/skel, then create Dev.
+  $ echo "Welcome to Pool Pros" | sudo tee /etc/skel/WELCOME.txt
+  $ sudo useradd -m dpatel
+  $ sudo ls -a /home/dpatel
+  You should see:
+    .  ..  .bash_logout  .bashrc  .profile  WELCOME.txt
+  Why: Only NEW users get it. Ana's home doesn't change.
+
+--- Step 13: Normal users vs system accounts.
+  $ awk -F: '$3>=1000 && $3<65000 {print $1, $3}' /etc/passwd
+  $ awk -F: '$3<1000 {print $1}' /etc/passwd | head -5
+  $ grep -E "^UID_MIN|^UID_MAX" /etc/login.defs
+  You should see:
+    You, areyes, bcarter, cdiaz, dpatel (1000+)
+    root, daemon, bin, sys, sync ...
+    UID_MIN 1000
+    UID_MAX 60000
+
+--- Step 14: Rename a group, see who's logged in.
+  $ sudo groupmod -n customer-care support
+  $ getent group customer-care
+  $ who
+  $ w
+  $ last -n 5
+  You should see:
+    customer-care:x:1002:bcarter
+    Then your session(s) and recent logins.
+
+--- Step 15: Offboard Dev the right way, and Ana the lazy way.
+  $ sudo userdel -r dpatel
+  $ sudo userdel areyes
+  $ ls /home
+  You should see:
+    dpatel's home is gone. areyes is still in /home.
+  Why: Without -r the files stay behind, owned by a UID nobody has now.
+
+--- Step 16: Clean up everything from this lab.
+  $ sudo userdel -r bcarter
+  $ sudo userdel -r cdiaz
+  $ sudo rm -rf /home/areyes
+  $ sudo groupdel sales
+  $ sudo groupdel customer-care
+  $ sudo rm /etc/skel/WELCOME.txt
+  You should see:
+    No output = all removed. (A 'mail spool not found' note is fine.)
+
+STUCK?
+  * useradd: user 'areyes' already exists: You ran it before. Skip ahead, or run the cleanup step and start over.
+  * useradd: group 'sales' does not exist: Do the groupadd step first.
+  * Permission denied on /home/<user>: Other users' homes are private. Use sudo ls.
+  * sudo su - cdiaz logs you in: The shell change didn't apply. Check: getent passwd cdiaz

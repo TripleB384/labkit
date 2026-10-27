@@ -1,0 +1,144 @@
+LESSON 10: Files & Directories   (Linux+ objective 2.1)
+============================================================
+Setup needed first: bash ~/labkit/u2.sh
+
+GOAL: Clean up a messy fake company folder: find big, old and risky files, then compare two configs.
+
+--- Step 1: Go to the lab folder and look around.
+  $ cd ~/linuxlab2
+  $ ls -l
+  $ ls -la projects/web
+  You should see:
+    configs  container  newhires.csv  projects  scripts  units
+    Then the web files, including deploy.sh and secrets.txt.
+
+--- Step 2: Practice moving around. cd - jumps back.
+  $ cd projects/web
+  $ pwd
+  $ cd ../..
+  $ cd -
+  $ cd ~/linuxlab2
+  You should see:
+    /home/<you>/linuxlab2/projects/web
+    ...then cd - prints that same path again.
+
+--- Step 3: Build a nested folder in one command.
+  $ mkdir -p archive/2026/oct
+  $ ls -R archive
+  You should see:
+    archive:
+    2026
+    archive/2026:
+    oct
+
+--- Step 4: Copy a folder, then rename a file.
+  $ cp -r projects/web archive/web-copy
+  $ ls archive/web-copy
+  $ mv projects/old/cache.tmp projects/old/cache.old
+  $ ls projects/old
+  You should see:
+    The 5 web files copied.
+    Then cache.tmp is now cache.old.
+
+--- Step 5: rmdir only works on empty folders.
+  $ rmdir projects/empty
+  $ rmdir projects/old
+  You should see:
+    First one works (no output).
+    rmdir: failed to remove 'projects/old': Directory not empty
+
+--- Step 6: Find all backup files.
+  $ find projects -name "*.bak"
+  You should see:
+    projects/old/notes.txt.bak
+    projects/old/draft.txt.bak
+
+--- Step 7: Find files over 1 MB, then files older than 30 days.
+  $ find projects -size +1M
+  $ find projects -mtime +30
+  You should see:
+    video-promo.mp4 and backup-2025.tar
+    Then: backup-2025.tar and notes.txt.bak
+  Why: -mtime +30 means modified MORE than 30 days ago. draft.txt.bak is only 10 days old, so it's not listed.
+
+--- Step 8: Security check: find files anyone can change.
+  $ find projects -type f -perm 777
+  $ ls -l projects/web/secrets.txt
+  You should see:
+    projects/web/secrets.txt
+    -rwxrwxrwx ... secrets.txt
+  Why: 777 = everyone can read, write and run it. A real admin would fix this right away.
+
+--- Step 9: Delete old backups with find -exec. Type y for each.
+  $ find projects -name "*.bak" -mtime +30 -exec rm -i {} \;
+  $ ls projects/old
+  You should see:
+    rm: remove regular file 'projects/old/notes.txt.bak'? y
+    Only notes.txt.bak is gone. draft.txt.bak stays.
+
+--- Step 10: What is each file really?
+  $ file projects/web/index.html projects/web/deploy.sh projects/web/video-promo.mp4 /bin/ls
+  You should see:
+    ASCII text
+    Bourne-Again shell script ... executable
+    data
+    ELF 64-bit LSB pie executable ...
+  Why: The .mp4 is fake: just zeros. file looks at the contents, not the name.
+
+--- Step 11: Inode details and sizes.
+  $ stat projects/web/index.html
+  $ du -sh projects/*
+  $ df -h ~
+  You should see:
+    File, Size, Inode, Links, Access (0664/-rw-rw-r--) ...
+    web about 5.1M, old about 2.1M
+    Then your disk's size and free space.
+
+--- Step 12: Compare two config versions three ways.
+  $ diff configs/site-v1.conf configs/site-v2.conf
+  $ sdiff configs/site-v1.conf configs/site-v2.conf
+  $ diff -u configs/site-v1.conf configs/site-v2.conf
+  You should see:
+    2c2
+    < listen 80
+    ---
+    > listen 443
+    ...
+    sdiff marks changes with | and new lines with >
+    diff -u shows - and + lines.
+
+--- Step 13: Use locate. It's fast but uses a database.
+  $ sudo apt install -y plocate
+  $ sudo updatedb
+  $ locate deploy.sh
+  $ touch ~/linuxlab2/brandnew.txt
+  $ locate brandnew.txt
+  $ sudo updatedb
+  $ locate brandnew.txt
+  You should see:
+    Finds deploy.sh.
+    brandnew.txt is NOT found the first time.
+    After updatedb it is.
+
+--- Step 14: See which files a process has open.
+  $ tail -f newhires.csv &
+  $ lsof newhires.csv
+  $ kill %1
+  You should see:
+    COMMAND  PID  USER ... NAME
+    tail     1234 you  ... newhires.csv
+
+--- Step 15: Look at device types in /dev.
+  $ ls -l /dev/null /dev/zero /dev/urandom /dev/tty
+  $ lsblk -d -o NAME,TYPE
+  $ ls -l /dev/$(lsblk -dn -o NAME | head -1)
+  You should see:
+    crw-rw-rw- ... /dev/null  (c = character)
+    ...
+    brw-rw---- ... /dev/sda or /dev/vda  (b = block)
+
+STUCK?
+  * No such file or directory: Run the Unit 2 lab setup from the Setup tab. It makes ~/linuxlab2.
+  * find: missing argument to -exec: The command must end with \; (backslash, then semicolon).
+  * locate: command not found: sudo apt install -y plocate, then sudo updatedb.
+  * lsof: command not found: sudo apt install -y lsof

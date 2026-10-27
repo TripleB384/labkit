@@ -1,0 +1,112 @@
+LESSON 3: Shell Skills & Editors   (Linux+ objective 1.5)
+============================================================
+Setup needed first: bash ~/labkit/u1.sh
+
+GOAL: Get fast at the shell and edit a config file in vim and nano.
+
+--- Step 1: Look at your recent history.
+  $ cd ~/linuxlab
+  $ history | tail -5
+  You should see:
+    Your last 5 commands, each with a number.
+
+--- Step 2: Run something, then repeat it with !!
+  $ grep -c ERROR app.log
+  $ !!
+  You should see:
+    3
+    (bash shows the command again, then) 3
+
+--- Step 3: Search history with Ctrl+R.
+    (Press Ctrl+R, type: awk)
+  You should see:
+    Your last awk command appears. Enter runs it. Ctrl+G cancels.
+
+--- Step 4: Whole-number math vs decimal math.
+  $ echo $((1228 / 12))
+  $ echo "scale=2; 1228 / 12" | bc
+  You should see:
+    102
+    102.33
+  Why: $(( )) drops decimals. bc keeps them.
+
+--- Step 5: Make a neat table with printf.
+  $ printf "%-10s %6.2f\n" Gold 149 Basic 59.5
+  You should see:
+    Gold       149.00
+    Basic       59.50
+  Why: printf reuses the format for each pair of values.
+
+--- Step 6: Turn lines into arguments with xargs.
+  $ sort -u servers.txt | xargs echo "Servers:"
+  You should see:
+    Servers: cache01 db01 web01 web02
+
+--- Step 7: Make and remove an alias.
+  $ alias ll='ls -lh'
+  $ ll
+  $ unalias ll
+  You should see:
+    ll shows a long listing. After unalias, ll is gone.
+
+--- Step 8: See why source matters.
+  $ echo 'MYVAR=pool' > vars.sh
+  $ bash vars.sh
+  $ echo "[$MYVAR]"
+  $ source vars.sh
+  $ echo "[$MYVAR]"
+  You should see:
+    []
+    [pool]
+  Why: bash runs it in a separate shell, so the variable disappears. source runs it in yours.
+
+--- Step 9: Check your environment and paths.
+  $ echo $HOME $SHELL
+  $ echo $PATH | tr ':' '\n'
+  $ cd /tmp
+  $ cd -
+  You should see:
+    Your home and shell, then each PATH folder on its own line. cd - jumps back to ~/linuxlab.
+
+--- Step 10: Check the kernel and CPU type.
+  $ uname -r
+  $ uname -m
+  You should see:
+    A kernel version like 6.x.x-xx-generic
+    x86_64 (or aarch64)
+
+--- Step 11: Edit in vim: back up first, then open the config.
+  $ cp config/app.conf config/app.bak
+  $ vim config/app.conf
+  You should see:
+    The file opens. You're in Normal mode.
+
+--- Step 12: In vim: replace debug=true, add a line, save.
+  $ :%s/debug=true/debug=false/
+  $ G
+  $ o
+  $ timezone=UTC
+    (press Esc)
+  $ :wq
+  You should see:
+    Back at the prompt.
+  Why: G = go to last line. o = open a new line below and switch to Insert mode.
+
+--- Step 13: Check what changed.
+  $ diff config/app.bak config/app.conf
+  You should see:
+    < debug=true
+    ---
+    > debug=false
+    plus an added timezone=UTC line
+
+--- Step 14: Edit with nano.
+  $ nano todo.txt
+  You should see:
+    Type a new line, press Ctrl+O then Enter to save, Ctrl+X to exit.
+
+STUCK?
+  * Stuck in vim: Press Esc a couple of times, type :q! and press Enter. That quits without saving.
+  * vim: command not found: Use vi instead, or run: sudo apt install -y vim
+  * Ctrl+R shows the wrong command: Press Ctrl+R again to go further back. Ctrl+G cancels.
+  * nano asks 'File Name to Write': Just press Enter to keep the same name.
