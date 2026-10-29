@@ -22,6 +22,17 @@ already running.
     1 systemd
     multi-user.target or graphical.target
     A list: cron.service, ssh.service ...
+  What each part means:
+    ps                          = List processes
+    -p 1                        = only this process ID
+    -o pid,comm                 = choose the columns
+    systemctl                   = Control systemd services and units
+    get-default                 = show the boot target
+    list-units                  = list loaded units
+    --type=service              = only this unit type
+    --state=running             = only units in this state
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
 
 --- Step 2 ----------------------------------------
 Look at a service that's already set up properly, cron, as an
@@ -33,6 +44,12 @@ example.
     ● cron.service ... Active: active (running)
     enabled
     active
+  What each part means:
+    systemctl                   = Control systemd services and units
+    status                      = show state and recent logs
+    --no-pager                  = print instead of opening a pager
+    is-enabled                  = answer: enabled at boot?
+    is-active                   = answer: running now?
 
 --- Step 3 ----------------------------------------
 Read the unit file prepared for poolapp.
@@ -42,6 +59,10 @@ Read the unit file prepared for poolapp.
     [Unit] Description ...
     [Service] ExecStart=/home/<you>/linuxlab2/scripts/poolapp.sh, Restart=on-failure
     [Install] WantedBy=multi-user.target
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~/linuxlab2                 = ~ = your home folder
+    cat                         = Print a file's contents
 
 --- Step 4 ----------------------------------------
 Install the service, tell systemd about it, and start it.
@@ -52,12 +73,26 @@ Install the service, tell systemd about it, and start it.
   You should see:
     Active: active (running)
     Main PID: 2345 (poolapp.sh)
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    cp                          = Copy files
+    /etc/systemd/system/        = where YOUR unit files go (wins over package files)
+    systemctl                   = Control systemd services and units
+    daemon-reload               = re-read unit files after you change them
+    start                       = start it now
+    status                      = show state and recent logs
+    --no-pager                  = print instead of opening a pager
 
 --- Step 5 ----------------------------------------
 Confirm poolapp is actually doing its job.
   $ sleep 6; tail -3 poolapp.log
   You should see:
     HH:MM:SS poolapp heartbeat (new lines every 5 seconds)
+  What each part means:
+    sleep                       = Wait this many seconds
+    ;                           = then run the next command
+    tail                        = Show the last lines of a file (default 10)
+    -3                          = show the last 3 lines
 
 --- Step 6 ----------------------------------------
 Make it start on every boot.
@@ -68,6 +103,11 @@ Make it start on every boot.
     enabled
   Why:
     Enable = a symlink in the target's .wants folder. That's all it is.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    systemctl                   = Control systemd services and units
+    enable                      = start it at every boot
+    is-enabled                  = answer: enabled at boot?
 
 --- Step 7 ----------------------------------------
 Rosa's question: "What happens if it crashes?" Crash it on purpose
@@ -80,6 +120,21 @@ and watch it come back.
   You should see:
     MainPID= changes to a NEW number.
     The journal says: Main process exited, code=killed, status=9/KILL ... Scheduled restart job
+  What each part means:
+    systemctl                   = Control systemd services and units
+    show                        = print unit properties
+    -p MainPID                  = only this property
+    sudo                        = Run the rest as root (admin)
+    kill                        = Send a signal to a process (default 15 TERM = please stop)
+    -9                          = SIGKILL: stop NOW, can't be ignored
+    $(pgrep poolapp)
+        = $( ) runs the command inside and pastes its result here
+    pgrep                       = Find process IDs by name
+    sleep                       = Wait this many seconds
+    journalctl                  = Read systemd's logs (the journal)
+    -u poolapp                  = only this unit (service)
+    -n 5                        = only the last 5 lines
+    --no-pager                  = print it all instead of opening a pager
 
 --- Step 8 ----------------------------------------
 Maintenance window: block poolapp from starting at all, prove it,
@@ -92,6 +147,13 @@ then unblock it.
     Created symlink ... → /dev/null
     Failed to start poolapp.service: Unit poolapp.service is masked.
     Removed ...
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    systemctl                   = Control systemd services and units
+    stop                        = stop it now
+    mask                        = block it from starting at all
+    start                       = start it now
+    unmask                      = undo mask
 
 --- Step 9 ----------------------------------------
 Marcus wants it to ALWAYS restart, not just on failure. Add an
@@ -105,6 +167,11 @@ override without editing the original file.
   Why:
     systemd saves it as
     /etc/systemd/system/poolapp.service.d/override.conf
+  What each part means:
+    sudo systemctl edit poolapp
+        = open an override file for poolapp in an editor
+    [Service]                   = the section the setting belongs to
+    Restart=always              = restart it no matter why it stopped
 
 --- Step 10 ----------------------------------------
 Confirm systemd picked up the override.
@@ -113,6 +180,11 @@ Confirm systemd picked up the override.
   You should see:
     The main file, then # /etc/systemd/system/poolapp.service.d/override.conf
     Restart=always
+  What each part means:
+    systemctl                   = Control systemd services and units
+    cat                         = print the unit file plus overrides
+    show                        = print unit properties
+    -p Restart                  = only this property
 
 --- Step 11 ----------------------------------------
 Move the nightly report from cron to a systemd timer.
@@ -122,6 +194,18 @@ Move the nightly report from cron to a systemd timer.
   $ systemctl list-timers | grep pool
   You should see:
     NEXT ... LEFT ... poolreport.timer  poolreport.service
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    cp                          = Copy files
+    /etc/systemd/system/        = where YOUR unit files go (wins over package files)
+    systemctl                   = Control systemd services and units
+    daemon-reload               = re-read unit files after you change them
+    enable                      = start it at every boot
+    --now                       = also start/stop it right now
+    list-timers                 = list timers and their next run
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    pool                        = the pattern to search for
 
 --- Step 12 ----------------------------------------
 Wait a minute, then confirm the timer ran the report.
@@ -130,6 +214,13 @@ Wait a minute, then confirm the timer ran the report.
   You should see:
     ... nightly report ran
     Started poolreport.service ... Finished ...
+  What each part means:
+    cat                         = Print a file's contents
+    sudo                        = Run the rest as root (admin)
+    journalctl                  = Read systemd's logs (the journal)
+    -u poolreport               = only this unit (service)
+    -n 3                        = only the last 3 lines
+    --no-pager                  = print it all instead of opening a pager
 
 --- Step 13 ----------------------------------------
 Rosa says boot feels slow. Check boot time, plus the hostname,
@@ -147,6 +238,18 @@ clock, DNS and kernel settings.
     Time zone, NTP service: active
     DNS servers
     net.ipv4.ip_forward = 0
+  What each part means:
+    systemd-analyze             = Boot-time analysis
+    blame                       = list units by how long they took to start
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -5                          = show the first 5 lines
+    hostnamectl                 = Show or set the hostname and OS info
+    timedatectl                 = Show time, time zone and NTP sync
+    resolvectl                  = Show DNS settings (systemd-resolved)
+    status                      = current DNS servers and settings
+    -8                          = show the first 8 lines
+    sysctl                      = Read or set kernel settings
 
 --- Step 14 ----------------------------------------
 Check for errors since boot, then watch poolapp's logs live.
@@ -155,6 +258,18 @@ Check for errors since boot, then watch poolapp's logs live.
     (press Ctrl+C to stop)
   You should see:
     Recent errors (if any). Then live heartbeat start/stop lines.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    journalctl                  = Read systemd's logs (the journal)
+    -b                          = only since this boot
+    -p err                      = only this priority or worse (err = errors)
+    --no-pager                  = print it all instead of opening a pager
+    |                           = pipe: send the output of the left command into the next one
+    tail                        = Show the last lines of a file (default 10)
+    -5                          = show the last 5 lines
+    -u poolapp                  = only this unit (service)
+    -f                          = follow: keep showing new lines live
+    Ctrl+C                      = stop the running command
 
 --- Step 15 ----------------------------------------
 Lab done. Remove the test service and timer cleanly.
@@ -165,6 +280,17 @@ Lab done. Remove the test service and timer cleanly.
   You should see:
     Removed ... symlinks
     Unit poolapp.service could not be found.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    systemctl                   = Control systemd services and units
+    disable                     = don't start it at boot
+    --now                       = also start/stop it right now
+    rm                          = Delete files
+    -r                          = recursive: folders and everything in them
+    /etc/systemd/system/poolapp.service
+        = where YOUR unit files go (wins over package files)
+    daemon-reload               = re-read unit files after you change them
+    status                      = show state and recent logs
 
 STUCK?
   * Failed to start: Unit not found

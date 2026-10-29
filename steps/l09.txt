@@ -19,6 +19,13 @@ main disk.
   $ du -sh ~/linuxlab
   You should see:
     Size/Used/Avail, then Inodes/IUsed/IFree, then the folder size (a few KB).
+  What each part means:
+    df                          = Disk free: space used and left on each filesystem
+    -h                          = human-readable sizes (M, G)
+    -i                          = show inodes instead of space
+    du                          = Disk usage: how much space files/folders use
+    -sh                         = -s summary: one total per item; -h human-readable sizes
+    ~/linuxlab                  = ~ = your home folder
 
 --- Step 2 ----------------------------------------
 Rebuild Jordan's problem: a small filesystem with very few inodes,
@@ -29,6 +36,20 @@ like his thumbnail server.
   $ sudo mount -o loop /root/disklab/tiny.img /mnt/tiny
   You should see:
     No output = success.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    truncate                    = Set a file's size
+    -s 20M                      = the new size
+    mkfs.ext4                   = Create an ext4 filesystem
+    -q                          = quiet
+    -F                          = force, even if it looks used
+    -N 64                       = how many inodes to create
+    mkdir                       = Make a folder
+    -p                          = make every missing parent folder too
+    /mnt/tiny                   = /mnt = a common place to mount things
+    mount                       = Attach a filesystem to a folder
+    -o loop                     = mount options
+    loop                        = mount a file as if it were a disk
 
 --- Step 3 ----------------------------------------
 Fill it with tiny files the way the thumbnail generator does, until
@@ -38,6 +59,18 @@ it breaks.
     touch: cannot touch '/mnt/tiny/f54': No space left on device
   Why:
     The exact number may differ slightly.
+  What each part means:
+    for                         = Loop: run the commands once for each item
+    $(seq 1 100)                = $( ) runs the command inside and pastes its result here
+    seq                         = Print a sequence of numbers
+    ;                           = then run the next command
+    do                          = start of the loop body
+    sudo                        = Run the rest as root (admin)
+    touch                       = Create an empty file, or update its timestamp
+    /mnt/tiny/f$i               = /mnt = a common place to mount things
+    |                           = pipe: send the output of the left command into the next one
+    break                       = Stop the loop
+    done                        = end of the loop
 
 --- Step 4 ----------------------------------------
 The mystery: why does it say full when there's space? Check both
@@ -49,6 +82,11 @@ numbers.
     df -i: IUse% 100%
   Why:
     This is inode exhaustion. Exam answer: check df -i.
+  What each part means:
+    df                          = Disk free: space used and left on each filesystem
+    -h                          = human-readable sizes (M, G)
+    /mnt/tiny                   = /mnt = a common place to mount things
+    -i                          = show inodes instead of space
 
 --- Step 5 ----------------------------------------
 Run a filesystem check on it. Remember to unmount first.
@@ -59,6 +97,12 @@ Run a filesystem check on it. Remember to unmount first.
     tiny.img: 64/64 files ...
   Why:
     -f = force a full check, -n = only look, change nothing.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    umount                      = Detach (unmount) a filesystem
+    /mnt/tiny                   = /mnt = a common place to mount things
+    e2fsck                      = Check an ext2/3/4 filesystem for errors
+    -fn                         = -f force a full check; -n no changes, just report
 
 --- Step 6 ----------------------------------------
 Jordan asks about the links he saw in the customers folder. Make a
@@ -70,6 +114,15 @@ hard link and a symlink to compare them.
   You should see:
     customers.csv and cust-hard.csv share the SAME inode number, link count 2.
     cust-soft.csv -> customers.csv has its own inode.
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~/linuxlab                  = ~ = your home folder
+    ln                          = Make a link to a file (hard link by default)
+    -s                          = symbolic link (points to the path)
+    ls                          = List files
+    -li
+        = -l long format: permissions, owner, size, date; -i show inode
+        numbers
 
 --- Step 7 ----------------------------------------
 Delete the original file. Which link still works?
@@ -81,12 +134,19 @@ Delete the original file. Which link still works?
     cat: cust-soft.csv: No such file or directory
   Why:
     Get customers.csv back later with: bash ~/labkit/u1.sh
+  What each part means:
+    rm                          = Delete files
+    head                        = Show the first lines of a file (default 10)
+    -2                          = show the first 2 lines
+    cat                         = Print a file's contents
 
 --- Step 8 ----------------------------------------
 Look at the inode details to see why the hard link survived.
   $ stat cust-hard.csv
   You should see:
     Inode: <number>   Links: 1  (it was 2 before the delete)
+  What each part means:
+    stat                        = Show a file's inode, size, permissions and times
 
 --- Step 9 ----------------------------------------
 Next item: set up the reports server's XFS filesystem on DISK1 and
@@ -101,6 +161,21 @@ mount it.
     Type: xfs, Size about 236M
   Why:
     XFS needs at least 300 MB, which is why it gets a whole fake disk.
+  What each part means:
+    source                      = Run a file in YOUR current shell, so its variables stay
+    /tmp/disks.env              = file the storage setup wrote, holding DISK1-DISK5
+    sudo                        = Run the rest as root (admin)
+    wipefs                      = Erase filesystem/partition signatures
+    -a                          = erase all of them
+    $DISK1                      = your fake disk 1 (from /tmp/disks.env)
+    mkfs.xfs                    = Create an XFS filesystem
+    -f                          = force, overwrite what's there
+    mkdir                       = Make a folder
+    -p                          = make every missing parent folder too
+    /mnt/xfsdata                = /mnt = a common place to mount things
+    mount                       = Attach a filesystem to a folder
+    df                          = Disk free: space used and left on each filesystem
+    -hT                         = -h human-readable sizes (M, G); -T show the filesystem type
 
 --- Step 10 ----------------------------------------
 Reports need more room. The "disk" just got bigger, so grow XFS
@@ -114,6 +189,17 @@ while it stays mounted.
     Size now about 336M
   Why:
     xfs_growfs takes the MOUNT POINT. There's no command to shrink XFS.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    truncate                    = Set a file's size
+    -s 400M                     = the new size
+    losetup                     = Manage loop devices (files acting as disks)
+    -c                          = re-read the backing file's size
+    $DISK1                      = your fake disk 1 (from /tmp/disks.env)
+    xfs_growfs                  = Grow a mounted XFS filesystem (give it the mount point)
+    /mnt/xfsdata                = /mnt = a common place to mount things
+    df                          = Disk free: space used and left on each filesystem
+    -hT                         = -h human-readable sizes (M, G); -T show the filesystem type
 
 --- Step 11 ----------------------------------------
 Marcus wants the ext4 settings on the uploads volume from ticket
@@ -121,6 +207,16 @@ PP-107.
   $ sudo tune2fs -l /dev/vg_lab/lv_data | grep -E "Inode count|Block size|features"
   You should see:
     Filesystem features: has_journal ... Inode count ... Block size: 4096
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    tune2fs                     = View or change ext4 settings
+    -l                          = list the superblock settings
+    /dev/vg_lab/lv_data         = your LVM volume (volume group / logical volume)
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    -E                          = extended regex (lets | mean OR)
+    "Inode count|Block size|features"
+        = the pattern to search for; | = OR
 
 --- Step 12 ----------------------------------------
 Jordan wants a super-fast scratch area for temp files. Mount one in
@@ -131,6 +227,18 @@ RAM.
   $ sudo umount /mnt/ram
   You should see:
     tmpfs  tmpfs  50M  0  50M  0%  /mnt/ram
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mkdir                       = Make a folder
+    -p                          = make every missing parent folder too
+    /mnt/ram                    = /mnt = a common place to mount things
+    mount                       = Attach a filesystem to a folder
+    -t tmpfs                    = filesystem type
+    -o size=50M                 = mount options
+    size=50M                    = maximum size
+    df                          = Disk free: space used and left on each filesystem
+    -hT                         = -h human-readable sizes (M, G); -T show the filesystem type
+    umount                      = Detach (unmount) a filesystem
 
 --- Step 13 ----------------------------------------
 All done. Clean up the storage lab and reset your files.
@@ -140,6 +248,13 @@ All done. Clean up the storage lab and reset your files.
   You should see:
     Storage lab cleaned up ...
     Lab ready in /home/<you>/linuxlab
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~                           = ~ = your home folder
+    sudo                        = Run the rest as root (admin)
+    bash
+        = Run the script in a NEW bash shell (its variables vanish when it
+        ends)
 
 STUCK?
   * mkfs.xfs: appears to contain an existing filesystem

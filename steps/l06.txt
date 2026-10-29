@@ -18,6 +18,11 @@ Load the test disk names and make sure no RAID array exists yet.
   You should see:
     Personalities : ...
     unused devices: <none>
+  What each part means:
+    source                      = Run a file in YOUR current shell, so its variables stay
+    /tmp/disks.env              = file the storage setup wrote, holding DISK1-DISK5
+    cat                         = Print a file's contents
+    /proc/mdstat                = live RAID status
 
 --- Step 2 ----------------------------------------
 Build the mirror (RAID 1) from DISK4 and DISK5 for the invoice
@@ -26,6 +31,15 @@ storage.
   You should see:
     It may warn about boot metadata and ask 'Continue creating array?' Type y and Enter.
     Then: mdadm: array /dev/md0 started.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mdadm                       = Manage Linux software RAID
+    --create                    = build a new array
+    /dev/md0                    = your RAID array device
+    --level=1                   = RAID level (1 = mirror)
+    --raid-devices=2            = how many disks
+    $DISK4                      = your fake disk 4 (from /tmp/disks.env)
+    $DISK5                      = your fake disk 5 (from /tmp/disks.env)
 
 --- Step 3 ----------------------------------------
 Check that both drives are in sync.
@@ -36,6 +50,9 @@ Check that both drives are in sync.
   Why:
     You may see a resync % at first. Wait a few seconds and run it
     again.
+  What each part means:
+    cat                         = Print a file's contents
+    /proc/mdstat                = live RAID status
 
 --- Step 4 ----------------------------------------
 Get the full array details for Rosa's records.
@@ -44,6 +61,11 @@ Get the full array details for Rosa's records.
     Raid Level : raid1
     State : clean
     Active Devices : 2
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mdadm                       = Manage Linux software RAID
+    --detail                    = show full array details
+    /dev/md0                    = your RAID array device
 
 --- Step 5 ----------------------------------------
 Format the mirror, mount it, and save an invoice file on it.
@@ -53,6 +75,18 @@ Format the mirror, mount it, and save an invoice file on it.
   $ echo "invoice data" | sudo tee /mnt/raid/data.txt
   You should see:
     invoice data
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mkfs.ext4                   = Create an ext4 filesystem
+    -q                          = quiet
+    /dev/md0                    = your RAID array device
+    mkdir                       = Make a folder
+    -p                          = make every missing parent folder too
+    /mnt/raid                   = /mnt = a common place to mount things
+    mount                       = Attach a filesystem to a folder
+    echo                        = Print text
+    |                           = pipe: send the output of the left command into the next one
+    tee                         = Show output on screen AND save it to a file
 
 --- Step 6 ----------------------------------------
 The real test for Rosa: kill one of the drives on purpose. Are the
@@ -65,6 +99,15 @@ invoices still there?
     Your file still reads: invoice data
   Why:
     [U_] = degraded. The mirror kept your data alive.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mdadm                       = Manage Linux software RAID
+    /dev/md0                    = your RAID array device
+    --fail                      = mark a disk as failed
+    $DISK5                      = your fake disk 5 (from /tmp/disks.env)
+    cat                         = Print a file's contents
+    /proc/mdstat                = live RAID status
+    /mnt/raid/data.txt          = /mnt = a common place to mount things
 
 --- Step 7 ----------------------------------------
 Swap in a "new" drive and watch the mirror rebuild itself.
@@ -73,6 +116,15 @@ Swap in a "new" drive and watch the mirror rebuild itself.
   $ cat /proc/mdstat
   You should see:
     recovery = xx% ... then later [2/2] [UU]
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mdadm                       = Manage Linux software RAID
+    /dev/md0                    = your RAID array device
+    --remove                    = take a disk out
+    $DISK5                      = your fake disk 5 (from /tmp/disks.env)
+    --add                       = add a disk (starts a rebuild)
+    cat                         = Print a file's contents
+    /proc/mdstat                = live RAID status
 
 --- Step 8 ----------------------------------------
 Test passed. Unmount and shut the array down.
@@ -80,6 +132,13 @@ Test passed. Unmount and shut the array down.
   $ sudo mdadm --stop /dev/md0
   You should see:
     mdadm: stopped /dev/md0
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    umount                      = Detach (unmount) a filesystem
+    /mnt/raid                   = /mnt = a common place to mount things
+    mdadm                       = Manage Linux software RAID
+    --stop                      = shut the array down
+    /dev/md0                    = your RAID array device
 
 STUCK?
   * mdadm: command not found

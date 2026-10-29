@@ -20,6 +20,14 @@ Open the shared folder and take a look around.
   You should see:
     configs  container  newhires.csv  projects  scripts  units
     Then the web files, including deploy.sh and secrets.txt.
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~/linuxlab2                 = ~ = your home folder
+    ls                          = List files
+    -l                          = long format: permissions, owner, size, date
+    -la
+        = -l long format: permissions, owner, size, date; -a show hidden
+        files too
 
 --- Step 2 ----------------------------------------
 Get comfortable moving around: dive into the web folder, then jump
@@ -32,6 +40,12 @@ back.
   You should see:
     /home/<you>/linuxlab2/projects/web
     ...then cd - prints that same path again.
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    pwd                         = Print the folder you're in
+    ../..                       = ../.. = up two folders
+    -                           = go back to the folder you were just in
+    ~/linuxlab2                 = ~ = your home folder
 
 --- Step 3 ----------------------------------------
 Make an archive folder for this month, organized by year and month.
@@ -42,6 +56,11 @@ Make an archive folder for this month, organized by year and month.
     2026
     archive/2026:
     oct
+  What each part means:
+    mkdir                       = Make a folder
+    -p                          = make every missing parent folder too
+    ls                          = List files
+    -R                          = recursive: list subfolders too
 
 --- Step 4 ----------------------------------------
 Archive a copy of the website, and rename the temp cache file so
@@ -53,6 +72,11 @@ it's clearly old.
   You should see:
     The 5 web files copied.
     Then cache.tmp is now cache.old.
+  What each part means:
+    cp                          = Copy files
+    -r                          = recursive: copy a folder and everything inside
+    ls                          = List files
+    mv                          = Move or rename
 
 --- Step 5 ----------------------------------------
 Remove the empty folder nobody uses. Then see what happens when you
@@ -62,6 +86,8 @@ try a folder that still has files in it.
   You should see:
     First one works (no output).
     rmdir: failed to remove 'projects/old': Directory not empty
+  What each part means:
+    rmdir                       = Delete an EMPTY folder
 
 --- Step 6 ----------------------------------------
 Find every backup file in the projects folder.
@@ -69,6 +95,10 @@ Find every backup file in the projects folder.
   You should see:
     projects/old/notes.txt.bak
     projects/old/draft.txt.bak
+  What each part means:
+    find                        = Search for files live on disk
+    projects                    = where to start searching
+    -name "*.bak"               = match this file name (* = anything)
 
 --- Step 7 ----------------------------------------
 Dana asks what's hogging space. Find files over 1 MB, then anything
@@ -81,6 +111,11 @@ not touched in a month.
   Why:
     -mtime +30 means modified MORE than 30 days ago. draft.txt.bak is
     only 10 days old, so it's not listed.
+  What each part means:
+    find                        = Search for files live on disk
+    projects                    = where to start searching
+    -size +1M                   = match by size (+1M = bigger than 1 MB)
+    -mtime +30                  = match by days since modified (+30 = more than 30)
 
 --- Step 8 ----------------------------------------
 Marcus's worry: find any file that ANYONE can change.
@@ -92,6 +127,13 @@ Marcus's worry: find any file that ANYONE can change.
   Why:
     777 = everyone can read, write and run it. A real admin would fix
     this right away.
+  What each part means:
+    find                        = Search for files live on disk
+    projects                    = where to start searching
+    -type f                     = f = files, d = folders
+    -perm 777                   = match exact permissions (777 = anyone can do anything)
+    ls                          = List files
+    -l                          = long format: permissions, owner, size, date
 
 --- Step 9 ----------------------------------------
 Delete only the backups older than 30 days. Confirm each one.
@@ -100,6 +142,17 @@ Delete only the backups older than 30 days. Confirm each one.
   You should see:
     rm: remove regular file 'projects/old/notes.txt.bak'? y
     Only notes.txt.bak is gone. draft.txt.bak stays.
+  What each part means:
+    find                        = Search for files live on disk
+    projects                    = where to start searching
+    -name "*.bak"               = match this file name (* = anything)
+    -mtime +30                  = match by days since modified (+30 = more than 30)
+    -exec                       = run a command on every match
+    rm                          = Delete files
+    -i                          = ask before each delete
+    {}                          = find fills in each file it found here
+    \;                          = marks the end of find's -exec command
+    ls                          = List files
 
 --- Step 10 ----------------------------------------
 Jordan says a file "looks weird". Check what each file really is,
@@ -113,6 +166,8 @@ ignoring the extension.
   Why:
     The .mp4 is fake: just zeros. file looks at the contents, not the
     name.
+  What each part means:
+    file                        = Identify what a file really is by its contents
 
 --- Step 11 ----------------------------------------
 Get the details on a file, and how much space each folder uses.
@@ -123,6 +178,13 @@ Get the details on a file, and how much space each folder uses.
     File, Size, Inode, Links, Access (0664/-rw-rw-r--) ...
     web about 5.1M, old about 2.1M
     Then your disk's size and free space.
+  What each part means:
+    stat                        = Show a file's inode, size, permissions and times
+    du                          = Disk usage: how much space files/folders use
+    -sh                         = -s summary: one total per item; -h human-readable sizes
+    df                          = Disk free: space used and left on each filesystem
+    -h                          = human-readable sizes (M, G)
+    ~                           = ~ = your home folder
 
 --- Step 12 ----------------------------------------
 Dana asks what changed between the old and new website configs.
@@ -138,6 +200,10 @@ Compare them three ways.
     ...
     sdiff marks changes with | and new lines with >
     diff -u shows - and + lines.
+  What each part means:
+    diff                        = Show the lines that differ between two files
+    sdiff                       = Show two files side by side (| = changed, > = added)
+    -u                          = unified format (- old, + new), used for patches
 
 --- Step 13 ----------------------------------------
 Find files across the whole server fast with locate, and learn why
@@ -153,6 +219,15 @@ it can miss brand-new ones.
     Finds deploy.sh.
     brandnew.txt is NOT found the first time.
     After updatedb it is.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    install                     = install the package plus anything it needs
+    -y                          = answer yes automatically, no prompt
+    updatedb                    = Rebuild the database that locate uses
+    locate                      = Find files fast using a database
+    touch                       = Create an empty file, or update its timestamp
+    ~/linuxlab2/brandnew.txt    = ~ = your home folder
 
 --- Step 14 ----------------------------------------
 Someone's "using" the new-hire list. See which process has it open.
@@ -162,6 +237,13 @@ Someone's "using" the new-hire list. See which process has it open.
   You should see:
     COMMAND  PID  USER ... NAME
     tail     1234 you  ... newhires.csv
+  What each part means:
+    tail                        = Show the last lines of a file (default 10)
+    -f                          = follow: keep showing new lines
+    &                           = run it in the background
+    lsof                        = List open files (who has a file open)
+    kill                        = Send a signal to a process (default 15 TERM = please stop)
+    %1                          = job number 1 from 'jobs'
 
 --- Step 15 ----------------------------------------
 Marcus quizzes you: which devices are disks and which are character
@@ -173,6 +255,13 @@ devices?
     crw-rw-rw- ... /dev/null  (c = character)
     ...
     brw-rw---- ... /dev/sda or /dev/vda  (b = block)
+  What each part means:
+    ls                          = List files
+    -l                          = long format: permissions, owner, size, date
+    /dev/null                   = the trash can: anything sent here disappears
+    lsblk                       = List disks and partitions as a tree
+    -d                          = disks only, no partitions
+    -o NAME,TYPE                = choose the columns
 
 STUCK?
   * No such file or directory

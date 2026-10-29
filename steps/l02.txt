@@ -21,12 +21,22 @@ the developer can find them fast.
     5:...ERROR db: connection refused
     9:...ERROR api: POST /invoice 500
     12:...ERROR disk: /var is 97% full
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~/linuxlab                  = ~ = your home folder
+    grep                        = Search text for lines matching a pattern
+    -n                          = show line numbers
+    ERROR                       = the pattern to search for
 
 --- Step 2 ----------------------------------------
 How many warnings did the app throw? Dana just needs the number.
   $ grep -c WARN app.log
   You should see:
     3
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    -c                          = count matching lines
+    WARN                        = the pattern to search for
 
 --- Step 3 ----------------------------------------
 The developer swears the database disconnected, but they don't
@@ -34,6 +44,10 @@ remember the capitalization. Search without caring about case.
   $ grep -i "DATABASE" app.log
   You should see:
     2 lines with 'connected to database'
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    -i                          = ignore upper/lower case
+    "DATABASE"                  = the pattern to search for
 
 --- Step 4 ----------------------------------------
 Dana says: "Skip the normal stuff." Show only the lines that aren't
@@ -42,6 +56,13 @@ INFO, then count them.
   $ grep -v INFO app.log | wc -l
   You should see:
     The WARN and ERROR lines, then: 6
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    -v                          = invert: show lines that do NOT match
+    INFO                        = the pattern to search for
+    |                           = pipe: send the output of the left command into the next one
+    wc                          = Count lines, words, bytes
+    -l                          = count lines
 
 --- Step 5 ----------------------------------------
 The disk warnings all end with the word "full". Pull just those
@@ -49,6 +70,9 @@ lines to show the disk is filling up.
   $ grep 'full$' app.log
   You should see:
     3 disk lines (81%, 88%, 97%)
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    'full$'                     = the pattern to search for; $ = end of line
 
 --- Step 6 ----------------------------------------
 Marcus asks what the app is actually set to. Show only the real
@@ -61,6 +85,12 @@ settings, with no comment lines and no blank lines.
     db_user=poolapp
     debug=true
     smtp_server=mail.example.com
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    -v                          = invert: show lines that do NOT match
+    '^#'                        = the pattern to search for; ^ = start of line
+    |                           = pipe: send the output of the left command into the next one
+    '^$'                        = ^$ = an empty line (start right next to end)
 
 --- Step 7 ----------------------------------------
 Finance wants names and cities only, not plans or prices. Cut out
@@ -71,6 +101,13 @@ just those two columns.
     Ana Reyes,Springfield
     Ben Carter,Riverside
     Carla Diaz,Springfield
+  What each part means:
+    cut                         = Cut out columns or characters from each line
+    -d,                         = delimiter: what separates the columns → ,
+    -f2,3                       = which field (column) numbers to keep → 2,3
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -4                          = show the first 4 lines
 
 --- Step 8 ----------------------------------------
 The owner asks: "Who are our big spenders?" List everyone paying
@@ -81,6 +118,12 @@ more than $100 a month.
     Dev Patel 149
     Iris Chen 149
     Kim Nguyen 149
+  What each part means:
+    awk                         = Column tool and mini language: splits lines into fields $1, $2 ...
+    -F,                         = field separator: what splits the columns → ,
+    'NR>1 && $5 > 100 {print $2, $5}'
+        = the awk program: NR>1 = skip line 1 (the header); $1, $2 ... =
+        column 1, column 2 ...; print = output these
 
 --- Step 9 ----------------------------------------
 Next question for the report: what's our total monthly revenue from
@@ -88,6 +131,13 @@ these customers?
   $ awk -F, 'NR>1 {sum+=$5} END {print sum}' customers.csv
   You should see:
     1228
+  What each part means:
+    awk                         = Column tool and mini language: splits lines into fields $1, $2 ...
+    -F,                         = field separator: what splits the columns → ,
+    'NR>1 {sum+=$5} END {print sum}'
+        = the awk program: NR>1 = skip line 1 (the header); $1, $2 ... =
+        column 1, column 2 ...; sum+=$5 = keep adding column 5; END {...} =
+        runs once after the last line; print = output these
 
 --- Step 10 ----------------------------------------
 Sales is thinking of renaming the Basic plan to Starter. Preview the
@@ -99,6 +149,17 @@ change without actually editing the customer file.
     Then: 4  (file still says Basic)
   Why:
     sed only prints the change. Add -i to actually edit the file.
+  What each part means:
+    sed                         = Stream editor: find and replace text
+    's/Basic/Starter/'
+        = s/Basic/Starter/ = substitute the first 'Basic' on each line with
+        'Starter'
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -3                          = show the first 3 lines
+    grep                        = Search text for lines matching a pattern
+    -c                          = count matching lines
+    Basic                       = the pattern to search for
 
 --- Step 11 ----------------------------------------
 Marcus hands you a messy server list with duplicates and asks for a
@@ -112,6 +173,11 @@ clean count. Find out why uniq alone doesn't work.
       2 db01
       1 web01
       3 web02
+  What each part means:
+    uniq                        = Drop repeated lines that are NEXT TO each other
+    sort                        = Sort lines
+    |                           = pipe: send the output of the left command into the next one
+    -c                          = count how many of each
 
 --- Step 12 ----------------------------------------
 Dana wants customers per city, biggest first, for the expansion
@@ -122,6 +188,17 @@ plan.
     3 Riverside
     2 Lakeside
     2 Fairview
+  What each part means:
+    cut                         = Cut out columns or characters from each line
+    -d,                         = delimiter: what separates the columns → ,
+    -f3                         = which field (column) numbers to keep → 3
+    |                           = pipe: send the output of the left command into the next one
+    tail                        = Show the last lines of a file (default 10)
+    -n +2                       = how many lines (+2 = start from line 2)
+    sort                        = Sort lines
+    uniq                        = Drop repeated lines that are NEXT TO each other
+    -c                          = count how many of each
+    -rn                         = -r reverse (biggest first); -n compare as numbers
 
 --- Step 13 ----------------------------------------
 Security heads-up: someone may be hammering the login page. Find the
@@ -131,6 +208,18 @@ busiest IP addresses in the web log.
     4 10.0.0.5
     3 192.168.1.20
     2 10.0.0.7
+  What each part means:
+    awk                         = Column tool and mini language: splits lines into fields $1, $2 ...
+    '{print $1}'
+        = the awk program: $1, $2 ... = column 1, column 2 ...; print =
+        output these
+    |                           = pipe: send the output of the left command into the next one
+    sort                        = Sort lines
+    uniq                        = Drop repeated lines that are NEXT TO each other
+    -c                          = count how many of each
+    -rn                         = -r reverse (biggest first); -n compare as numbers
+    head                        = Show the first lines of a file (default 10)
+    -3                          = show the first 3 lines
 
 --- Step 14 ----------------------------------------
 Before you hit send, read through the whole app log in a pager and
@@ -138,6 +227,8 @@ jump straight to the errors.
   $ less app.log
   You should see:
     Type /ERROR then Enter to jump to it. Press n for next. Press q to quit.
+  What each part means:
+    less                        = Page through a file (/ search, q quit)
 
 STUCK?
   * awk prints weird stuff

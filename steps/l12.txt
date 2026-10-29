@@ -23,6 +23,14 @@ production.
     Then its PID.
   Why:
     $! = PID of the last background job.
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~/linuxlab2                 = ~ = your home folder
+    ./scripts/poolapp.sh        = run this script or program
+    &                           = run it in the background
+    jobs                        = List this shell's background and paused jobs
+    echo                        = Print text
+    $!                          = PID of the last background job
 
 --- Step 2 ----------------------------------------
 Find the app's process three different ways.
@@ -35,6 +43,18 @@ Find the app's process three different ways.
   Why:
     [p] keeps grep from matching itself. S = sleeping: it waits 5
     seconds between writes.
+  What each part means:
+    pgrep                       = Find process IDs by name
+    -a                          = also show the full command
+    ps                          = List processes
+    aux                         = every process, BSD style
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    [p]oolapp
+        = the pattern to search for; [p] trick: matches 'p' but stops grep
+        from finding its own command
+    -o pid,ppid,stat,ni,comm    = choose the columns
+    -p $(pgrep poolapp)         = only this process ID
 
 --- Step 3 ----------------------------------------
 Who launched the app? Look at the process family tree.
@@ -43,6 +63,14 @@ Who launched the app? Look at the process family tree.
   You should see:
     bash(1200)─┬─poolapp.sh(1234)───sleep(...)
     $$ = your shell's PID, the same as the PPID above.
+  What each part means:
+    pstree                      = Show processes as a family tree
+    -p                          = show PIDs
+    $$                          = PID of this shell
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -5                          = show the first 5 lines
+    echo                        = Print text
 
 --- Step 4 ----------------------------------------
 Read the app's live details straight from /proc.
@@ -53,6 +81,14 @@ Read the app's live details straight from /proc.
     State: S (sleeping)
     PPid: 1200
     cwd -> /home/<you>/linuxlab2
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    -E                          = extended regex (lets | mean OR)
+    "Name|State|PPid"           = the pattern to search for; | = OR
+    /proc/$(pgrep poolapp)/status
+        = /proc = live info from the kernel (not real files on disk)
+    ls                          = List files
+    -l                          = long format: permissions, owner, size, date
 
 --- Step 5 ----------------------------------------
 Here's the culprit: a CPU hog someone left running. Start it with a
@@ -65,6 +101,15 @@ lower priority to simulate it.
     1300  10 99.0 RN   cpuhog.sh
   Why:
     R = running, N = low priority (nice).
+  What each part means:
+    nice                        = Start a command with a different priority
+    -n 10                       = nice value (higher = lower priority)
+    ./scripts/cpuhog.sh         = run this script or program
+    &                           = run it in the background
+    sleep                       = Wait this many seconds
+    ps                          = List processes
+    -o pid,ni,pcpu,stat,comm    = choose the columns
+    -p $(pgrep cpuhog)          = only this process ID
 
 --- Step 6 ----------------------------------------
 Lower its priority even more. Then try to raise it again without
@@ -79,12 +124,21 @@ sudo, and see why you can't.
   Why:
     Normal users can only make a process nicer (higher number). Lowering
     needs root.
+  What each part means:
+    renice                      = Change a running process's priority
+    -n 15                       = new nice value
+    -p $(pgrep cpuhog)          = process ID
+    -n 5                        = new nice value
+    sudo                        = Run the rest as root (admin)
+    -n -5                       = new nice value
 
 --- Step 7 ----------------------------------------
 Watch it eat CPU live in top.
   $ top
   You should see:
     cpuhog.sh near the top, about 100% CPU, NI = -5.
+  What each part means:
+    top                         = Live view of processes (P = sort by CPU, q = quit)
 
 --- Step 8 ----------------------------------------
 Pause the hog without killing it, check its state, then let it
@@ -94,6 +148,15 @@ continue.
   $ kill -CONT $(pgrep cpuhog)
   You should see:
     STAT T  (T = stopped)
+  What each part means:
+    kill                        = Send a signal to a process (default 15 TERM = please stop)
+    -STOP                       = pause it
+    $(pgrep cpuhog)             = $( ) runs the command inside and pastes its result here
+    pgrep                       = Find process IDs by name
+    ps                          = List processes
+    -o pid,stat,comm            = choose the columns
+    -p $(pgrep cpuhog)          = only this process ID
+    -CONT                       = un-pause it
 
 --- Step 9 ----------------------------------------
 Ask it nicely to stop (the default signal).
@@ -102,6 +165,13 @@ Ask it nicely to stop (the default signal).
   $ pgrep cpuhog || echo "cpuhog gone"
   You should see:
     cpuhog gone
+  What each part means:
+    kill                        = Send a signal to a process (default 15 TERM = please stop)
+    $(pgrep cpuhog)             = $( ) runs the command inside and pastes its result here
+    pgrep                       = Find process IDs by name
+    sleep                       = Wait this many seconds
+    |                           = pipe: send the output of the left command into the next one
+    echo                        = Print text
 
 --- Step 10 ----------------------------------------
 Marcus shows you how to pause a job, send it to the background, and
@@ -117,6 +187,13 @@ bring it back.
     [2]+ Stopped ./scripts/cpuhog.sh
     ...after bg: Running
     fg brings it back. Ctrl+C ends it.
+  What each part means:
+    ./scripts/cpuhog.sh         = run this script or program
+    Ctrl+Z                      = pause the running command
+    jobs                        = List this shell's background and paused jobs
+    bg                          = Resume a paused job in the background
+    fg                          = Bring a background job back to the front
+    Ctrl+C                      = stop the running command
 
 --- Step 11 ----------------------------------------
 Someone ran a job with nohup so it survives logout. Stop it by name,
@@ -126,6 +203,19 @@ and look at the signal list.
   $ kill -l | head -2
   You should see:
      1) SIGHUP  2) SIGINT ... 9) SIGKILL ... 15) SIGTERM
+  What each part means:
+    nohup                       = Keep the command running after you log out
+    ./scripts/cpuhog.sh         = run this script or program
+    >                           = save output to a file (overwrites it)
+    /dev/null                   = the trash can: anything sent here disappears
+    2>&1                        = send errors to the same place as normal output
+    &                           = run it in the background
+    pkill                       = Send a signal to processes by name
+    kill                        = Send a signal to a process (default 15 TERM = please stop)
+    -l                          = list all signal names
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -2                          = show the first 2 lines
 
 --- Step 12 ----------------------------------------
 The app froze and won't respond. Force-kill it.
@@ -135,6 +225,15 @@ The app froze and won't respond. Force-kill it.
   You should see:
     Killed  ./scripts/poolapp.sh
     Then how many heartbeat lines it wrote.
+  What each part means:
+    kill                        = Send a signal to a process (default 15 TERM = please stop)
+    -9                          = SIGKILL: stop NOW, can't be ignored
+    $(pgrep poolapp)
+        = $( ) runs the command inside and pastes its result here
+    pgrep                       = Find process IDs by name
+    jobs                        = List this shell's background and paused jobs
+    wc                          = Count lines, words, bytes
+    -l                          = count lines
 
 --- Step 13 ----------------------------------------
 Check the server's limits, load average and CPU stats for your
@@ -148,6 +247,16 @@ incident report.
     Max processes, then 1024 open files
     load average: x, y, z (1, 5, 15 minutes)
     mpstat: %usr %sys %idle ...
+  What each part means:
+    ulimit                      = Show this shell's limits
+    -u                          = max number of processes
+    -n                          = max open files
+    uptime                      = How long the system's been up, plus load averages
+    sudo                        = Run the rest as root (admin)
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    install                     = install the package plus anything it needs
+    -y                          = answer yes automatically, no prompt
+    mpstat                      = CPU usage stats (from sysstat). '1 1' = every 1 second, once
 
 --- Step 14 ----------------------------------------
 Marcus shows you how to see exactly what a program is asking the
@@ -155,6 +264,11 @@ kernel to do.
   $ strace -c ls > /dev/null
   You should see:
     A table: % time, calls, syscall (read, openat, write ...)
+  What each part means:
+    strace                      = Show the system calls a program makes
+    -c                          = count them in a summary table
+    >                           = save output to a file (overwrites it)
+    /dev/null                   = the trash can: anything sent here disappears
 
 --- Step 15 ----------------------------------------
 Rosa wants the report script to run automatically. Schedule it every
@@ -163,6 +277,21 @@ minute for testing.
   $ crontab -l
   You should see:
     * * * * * /home/<you>/linuxlab2/scripts/report.sh
+  What each part means:
+    ( )
+        = run the commands inside as one group, so their output goes into
+        one pipe
+    crontab                     = Edit or view your scheduled (cron) jobs
+    -l                          = list your cron jobs
+    2>                          = save only errors to a file
+    /dev/null                   = the trash can: anything sent here disappears
+    ;                           = then run the next command
+    echo                        = Print text
+    "* * * * * $HOME/linuxlab2/scripts/report.sh"
+        = a cron line: 5 time fields (minute hour day month weekday; * =
+        every), then the command to run
+    |                           = pipe: send the output of the left command into the next one
+    -                           = read the new schedule from the pipe
 
 --- Step 16 ----------------------------------------
 Wait two minutes, confirm it ran, then remove the test schedule.
@@ -172,6 +301,12 @@ Wait two minutes, confirm it ran, then remove the test schedule.
   You should see:
     2026-.. nightly report ran (one line per minute)
     no crontab for <you>
+  What each part means:
+    cat                         = Print a file's contents
+    ~/linuxlab2/report.log      = ~ = your home folder
+    crontab                     = Edit or view your scheduled (cron) jobs
+    -r                          = remove all your cron jobs
+    -l                          = list your cron jobs
 
 --- Step 17 ----------------------------------------
 Run the report once, one minute from now, without cron.
@@ -181,6 +316,16 @@ Run the report once, one minute from now, without cron.
   You should see:
     job 1 at ...
     1  <date>  a  <you>
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    install                     = install the package plus anything it needs
+    -y                          = answer yes automatically, no prompt
+    echo                        = Print text
+    |                           = pipe: send the output of the left command into the next one
+    at                          = Run a command once, at a set time
+    now + 1 minute              = when to run it
+    atq                         = List jobs waiting in the at queue
 
 --- Step 18 ----------------------------------------
 Look at the schedules that already run on this server.
@@ -191,6 +336,11 @@ Look at the schedules that already run on this server.
     anacrontab lines: period delay job-id command.
   Why:
     No /etc/anacrontab? sudo apt install -y anacron
+  What each part means:
+    ls                          = List files
+    /etc/cron.d                 = system cron schedules
+    cat                         = Print a file's contents
+    /etc/anacrontab             = anacron's schedule
 
 STUCK?
   * pgrep finds nothing

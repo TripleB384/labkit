@@ -18,12 +18,22 @@ physical volumes.
   $ sudo pvcreate $DISK2 $DISK3
   You should see:
     Physical volume "/dev/loopN" successfully created. (x2)
+  What each part means:
+    source                      = Run a file in YOUR current shell, so its variables stay
+    /tmp/disks.env              = file the storage setup wrote, holding DISK1-DISK5
+    sudo                        = Run the rest as root (admin)
+    pvcreate                    = Prepare a disk for LVM (physical volume)
+    $DISK2                      = your fake disk 2 (from /tmp/disks.env)
+    $DISK3                      = your fake disk 3 (from /tmp/disks.env)
 
 --- Step 2 ----------------------------------------
 Confirm both disks are ready for LVM.
   $ sudo pvs
   You should see:
     Two PVs, about 300m each. The VG column is empty (not in a pool yet).
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    pvs                         = List physical volumes
 
 --- Step 3 ----------------------------------------
 Start a storage pool (volume group) with just DISK2 for now.
@@ -33,6 +43,11 @@ Start a storage pool (volume group) with just DISK2 for now.
     vg_lab  1 PV  ... VSize about 296m
   Why:
     A few MB go to LVM's own metadata.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    vgcreate                    = Create an LVM volume group (storage pool)
+    $DISK2                      = your fake disk 2 (from /tmp/disks.env)
+    vgs                         = List volume groups
 
 --- Step 4 ----------------------------------------
 Carve out a 100 MB volume for Jordan's uploads.
@@ -40,6 +55,12 @@ Carve out a 100 MB volume for Jordan's uploads.
   $ sudo lvs
   You should see:
     lv_data  vg_lab  -wi-a-----  100.00m
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    lvcreate                    = Create an LVM logical volume
+    -n lv_data                  = name for the new volume
+    -L 100M                     = size (100M)
+    lvs                         = List logical volumes
 
 --- Step 5 ----------------------------------------
 Jordan asks which device path to use. Show him both names point to
@@ -48,6 +69,14 @@ the same volume.
   $ ls -l /dev/mapper/ | grep lv_data
   You should see:
     lv_data -> ../dm-0  (links to the same dm device)
+  What each part means:
+    ls                          = List files
+    -l                          = long format: permissions, owner, size, date
+    /dev/vg_lab/                = your LVM volume (volume group / logical volume)
+    /dev/mapper/                = device-mapper names for LVM volumes
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    lv_data                     = the pattern to search for
 
 --- Step 6 ----------------------------------------
 Format the volume and mount it where uploads will live.
@@ -57,6 +86,17 @@ Format the volume and mount it where uploads will live.
   $ df -h /mnt/data
   You should see:
     Size about 90M, mounted on /mnt/data
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mkfs.ext4                   = Create an ext4 filesystem
+    -q                          = quiet
+    /dev/vg_lab/lv_data         = your LVM volume (volume group / logical volume)
+    mkdir                       = Make a folder
+    -p                          = make every missing parent folder too
+    /mnt/data                   = /mnt = a common place to mount things
+    mount                       = Attach a filesystem to a folder
+    df                          = Disk free: space used and left on each filesystem
+    -h                          = human-readable sizes (M, G)
 
 --- Step 7 ----------------------------------------
 Uploads are filling up. Grow the volume by 100 MB while it stays
@@ -68,6 +108,15 @@ mounted.
   Why:
     -r runs resize2fs for you. Without -r the LV grows but df still
     shows the old size.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    lvextend                    = Grow a logical volume
+    -r                          = also resize the filesystem on it
+    -L +100M                    = new size (a + means add that much)
+    /dev/vg_lab/lv_data         = your LVM volume (volume group / logical volume)
+    df                          = Disk free: space used and left on each filesystem
+    -h                          = human-readable sizes (M, G)
+    /mnt/data                   = /mnt = a common place to mount things
 
 --- Step 8 ----------------------------------------
 Jordan wants another 200 MB. Try it and see what the pool says.
@@ -76,6 +125,12 @@ Jordan wants another 200 MB. Try it and see what the pool says.
     Insufficient free space ...
   Why:
     The pool (VG) is almost out of space.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    lvextend                    = Grow a logical volume
+    -r                          = also resize the filesystem on it
+    -L +200M                    = new size (a + means add that much)
+    /dev/vg_lab/lv_data         = your LVM volume (volume group / logical volume)
 
 --- Step 9 ----------------------------------------
 Add DISK3 to the pool, then give Jordan his 200 MB.
@@ -86,6 +141,18 @@ Add DISK3 to the pool, then give Jordan his 200 MB.
   You should see:
     vg_lab now has 2 PVs, about 592m.
     The LV grows. df shows about 370–380M.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    vgextend                    = Add a disk to a volume group
+    $DISK3                      = your fake disk 3 (from /tmp/disks.env)
+    vgs                         = List volume groups
+    lvextend                    = Grow a logical volume
+    -r                          = also resize the filesystem on it
+    -L +200M                    = new size (a + means add that much)
+    /dev/vg_lab/lv_data         = your LVM volume (volume group / logical volume)
+    df                          = Disk free: space used and left on each filesystem
+    -h                          = human-readable sizes (M, G)
+    /mnt/data                   = /mnt = a common place to mount things
 
 --- Step 10 ----------------------------------------
 Marcus asks which physical disks the uploads now live on. Show him.
@@ -93,6 +160,14 @@ Marcus asks which physical disks the uploads now live on. Show him.
   $ sudo lvdisplay /dev/vg_lab/lv_data | head -12
   You should see:
     Both PVs now show used space. lvdisplay shows LV Size about 400 MiB.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    pvs                         = List physical volumes
+    lvdisplay                   = Show logical volume details
+    /dev/vg_lab/lv_data         = your LVM volume (volume group / logical volume)
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -12                         = show the first 12 lines
 
 STUCK?
   * Cannot use /dev/loopN: device is partitioned

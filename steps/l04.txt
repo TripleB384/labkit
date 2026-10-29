@@ -20,6 +20,12 @@ loaded. How many are there?
   You should see:
     Columns: Module  Size  Used by
     Then a number (often 50–150).
+  What each part means:
+    lsmod                       = List loaded kernel modules (drivers)
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    wc                          = Count lines, words, bytes
+    -l                          = count lines
 
 --- Step 2 ----------------------------------------
 Pick the first driver in the list and pull its details for the
@@ -27,6 +33,17 @@ report.
   $ modinfo $(lsmod | awk 'NR==2{print $1}') | head
   You should see:
     filename:, description:, license:, depends: ...
+  What each part means:
+    modinfo                     = Show a kernel module's details
+    $(lsmod | awk 'NR==2{print $1}')
+        = $( ) runs the command inside and pastes its result here
+    lsmod                       = List loaded kernel modules (drivers)
+    |                           = pipe: send the output of the left command into the next one
+    awk                         = Column tool and mini language: splits lines into fields $1, $2 ...
+    'NR==2{print $1}'
+        = the awk program: NR==2 = only line 2; $1, $2 ... = column 1,
+        column 2 ...; print = output these
+    head                        = Show the first lines of a file (default 10)
 
 --- Step 3 ----------------------------------------
 Marcus shows you how to load a driver and remove it again. Practice
@@ -40,6 +57,14 @@ with the harmless "dummy" module.
   Why:
     If you get 'Module dummy not found', this machine doesn't ship it.
     Skip this step.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    modprobe                    = Load a kernel module plus its dependencies
+    lsmod                       = List loaded kernel modules (drivers)
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    dummy                       = the pattern to search for
+    -r                          = remove (unload) it
 
 --- Step 4 ----------------------------------------
 Before loading anything on a production box, do a dry run to see
@@ -47,6 +72,10 @@ what modprobe WOULD do.
   $ modprobe -n -v dummy
   You should see:
     insmod /lib/modules/.../dummy.ko (or nothing if already built in)
+  What each part means:
+    modprobe                    = Load a kernel module plus its dependencies
+    -n                          = dry run: don't actually do it
+    -v                          = verbose: show what it does
 
 --- Step 5 ----------------------------------------
 The auditor wants CPU details. Get them two ways.
@@ -55,6 +84,16 @@ The auditor wants CPU details. Get them two ways.
   You should see:
     Architecture: x86_64, CPU(s): N ...
     Then the CPU count.
+  What each part means:
+    lscpu                       = Show CPU details
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -15                         = show the first 15 lines
+    grep                        = Search text for lines matching a pattern
+    -c                          = count matching lines
+    processor                   = the pattern to search for
+    /proc/cpuinfo
+        = /proc = live info from the kernel (not real files on disk)
 
 --- Step 6 ----------------------------------------
 Next on the list: how much memory does this server have?
@@ -62,6 +101,13 @@ Next on the list: how much memory does this server have?
   $ lsmem | tail -3
   You should see:
     Total/used/free RAM, then 'Total online memory'.
+  What each part means:
+    free                        = Show memory (RAM) use
+    -h                          = human-readable sizes
+    lsmem                       = Show memory blocks
+    |                           = pipe: send the output of the left command into the next one
+    tail                        = Show the last lines of a file (default 10)
+    -3                          = show the last 3 lines
 
 --- Step 7 ----------------------------------------
 List the PCI hardware and which driver each device uses.
@@ -73,6 +119,12 @@ List the PCI hardware and which driver each device uses.
     In a VM you'll see virtual hardware. On an AWS cloud VM: Amazon
     Elastic Network Adapter and NVMe controllers. Others show Virtio or
     QEMU.
+  What each part means:
+    lspci                       = List PCI devices
+    -k                          = also show the driver each one uses
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -20                         = show the first 20 lines
 
 --- Step 8 ----------------------------------------
 Any USB devices plugged in? (On a cloud VM there may be none, and
@@ -80,18 +132,34 @@ that's fine.)
   $ lsusb
   You should see:
     A list, or nothing at all in many VMs. Both are fine.
+  What each part means:
+    lsusb                       = List USB devices
 
 --- Step 9 ----------------------------------------
 The auditor wants the maker, model and serial number from the BIOS.
   $ sudo dmidecode -t system | head -15
   You should see:
     Manufacturer, Product Name, Serial Number (an AWS VM shows Amazon EC2; others show QEMU).
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    dmidecode                   = Read hardware info from the BIOS
+    -t system                   = which type of info (system = maker, model, serial)
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -15                         = show the first 15 lines
 
 --- Step 10 ----------------------------------------
 Generate a one-page hardware summary for the report.
   $ sudo lshw -short | head -20
   You should see:
     A table: H/W path, Device, Class, Description
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    lshw                        = List all hardware
+    -short                      = one line per device
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -20                         = show the first 20 lines
 
 --- Step 11 ----------------------------------------
 Check the kernel's own log for hardware errors.
@@ -99,6 +167,15 @@ Check the kernel's own log for hardware errors.
   $ sudo dmesg | grep -i error
   You should see:
     Recent kernel lines with [timestamps]. The error search may be empty.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    dmesg                       = Show the kernel's message log (hardware, drivers)
+    |                           = pipe: send the output of the left command into the next one
+    tail                        = Show the last lines of a file (default 10)
+    -20                         = show the last 20 lines
+    grep                        = Search text for lines matching a pattern
+    -i                          = ignore upper/lower case
+    error                       = the pattern to search for
 
 --- Step 12 ----------------------------------------
 Note which kernel the server boots, and find its matching initrd
@@ -107,6 +184,14 @@ file in /boot.
   $ ls -lh /boot
   You should see:
     vmlinuz-<version> (kernel) and initrd.img-<version> (initrd) match uname -r.
+  What each part means:
+    uname                       = System info
+    -r                          = kernel version
+    ls                          = List files
+    -lh
+        = -l long format: permissions, owner, size, date; -h human-readable
+        sizes
+    /boot                       = kernel and initrd files
 
 --- Step 13 ----------------------------------------
 Last item: list what drivers are packed inside the initrd that loads
@@ -116,6 +201,11 @@ at boot.
     A list of files and drivers packed into the initrd.
   Why:
     Ubuntu tool. On RHEL: lsinitrd. To rebuild on RHEL: dracut -f
+  What each part means:
+    lsinitramfs                 = List the files packed inside an initrd (Ubuntu)
+    /boot/initrd.img-$(uname -r)= kernel and initrd files
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
 
 STUCK?
   * command not found (lspci, lsusb, lshw, dmidecode)

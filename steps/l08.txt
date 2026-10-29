@@ -19,12 +19,19 @@ Confirm the uploads volume from yesterday's ticket is still mounted.
     /mnt/data  /dev/mapper/vg_lab-lv_data  ext4  rw,relatime
   Why:
     Nothing printed? Run: sudo mount /dev/vg_lab/lv_data /mnt/data
+  What each part means:
+    findmnt                     = Show where something is mounted and with which options
+    /mnt/data                   = /mnt = a common place to mount things
 
 --- Step 2 ----------------------------------------
 Check the kernel's live list of mounts too.
   $ grep /mnt/data /proc/mounts
   You should see:
     /dev/mapper/vg_lab-lv_data /mnt/data ext4 rw,relatime 0 0
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    /mnt/data                   = /mnt = a common place to mount things
+    /proc/mounts                = the kernel's live list of mounts
 
 --- Step 3 ----------------------------------------
 Simulate an attacker: copy a script onto the uploads volume and run
@@ -33,6 +40,12 @@ it. It works, and that's the problem.
   $ /mnt/data/hello.sh
   You should see:
     Hello from the lab script!
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    cp                          = Copy files
+    ~/linuxlab/scripts/hello.sh = ~ = your home folder
+    /mnt/data/                  = /mnt = a common place to mount things
+    /mnt/data/hello.sh          = run this script or program
 
 --- Step 4 ----------------------------------------
 Apply the fix: remount with noexec and try running the script again.
@@ -45,6 +58,15 @@ Apply the fix: remount with noexec and try running the script again.
   Why:
     The file is executable, but the mount blocks it. Common on /tmp for
     security.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mount                       = Attach a filesystem to a folder
+    -o remount,noexec           = mount options
+    remount                     = change options without unmounting
+    noexec                      = block running programs from here
+    /mnt/data                   = /mnt = a common place to mount things
+    /mnt/data/hello.sh          = run this script or program
+    findmnt                     = Show where something is mounted and with which options
 
 --- Step 5 ----------------------------------------
 For this test only, turn exec back on so you can see the difference.
@@ -52,6 +74,14 @@ For this test only, turn exec back on so you can see the difference.
   $ /mnt/data/hello.sh
   You should see:
     Hello from the lab script!
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mount                       = Attach a filesystem to a folder
+    -o remount,exec             = mount options
+    remount                     = change options without unmounting
+    exec                        = allow running programs
+    /mnt/data                   = /mnt = a common place to mount things
+    /mnt/data/hello.sh          = run this script or program
 
 --- Step 6 ----------------------------------------
 Maintenance mode: make the volume read-only, prove nothing can be
@@ -61,6 +91,16 @@ written, then switch back.
   $ sudo mount -o remount,rw /mnt/data
   You should see:
     touch: cannot touch '/mnt/data/test.txt': Read-only file system
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mount                       = Attach a filesystem to a folder
+    -o remount,ro               = mount options
+    remount                     = change options without unmounting
+    ro                          = read-only
+    /mnt/data                   = /mnt = a common place to mount things
+    touch                       = Create an empty file, or update its timestamp
+    -o remount,rw               = mount options
+    rw                          = read-write
 
 --- Step 7 ----------------------------------------
 Try to unmount while you're standing inside the folder. Then fix the
@@ -73,6 +113,13 @@ Try to unmount while you're standing inside the folder. Then fix the
   You should see:
     umount: /mnt/data: target is busy.
     ...then after cd ~ it works, and findmnt prints nothing.
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    /mnt/data                   = /mnt = a common place to mount things
+    sudo                        = Run the rest as root (admin)
+    umount                      = Detach (unmount) a filesystem
+    ~                           = ~ = your home folder
+    findmnt                     = Show where something is mounted and with which options
 
 --- Step 8 ----------------------------------------
 Make it mount at boot. Back up fstab first (Marcus never skips
@@ -84,6 +131,18 @@ this), then add the entry.
   Why:
     Real servers use UUID=... from blkid. The device path is fine for
     this lab.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    cp                          = Copy files
+    /etc/fstab                  = the list of filesystems to mount at boot
+    /etc/fstab.bak              = your backup copy of fstab
+    echo                        = Print text
+    "/dev/vg_lab/lv_data /mnt/data ext4 defaults,noatime,nofail 0 2"
+        = an fstab line: device, mount point, type, options, dump (0 = no),
+        fsck order (2 = after root)
+    |                           = pipe: send the output of the left command into the next one
+    tee                         = Show output on screen AND save it to a file
+    -a                          = append instead of overwrite
 
 --- Step 9 ----------------------------------------
 Test the new fstab line now, before a reboot can find your mistake.
@@ -93,6 +152,12 @@ Test the new fstab line now, before a reboot can find your mistake.
     /mnt/data mounted again, OPTIONS include noatime
   Why:
     No errors = safe to reboot. An error here = fix fstab NOW.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mount                       = Attach a filesystem to a folder
+    -a                          = mount everything in /etc/fstab
+    findmnt                     = Show where something is mounted and with which options
+    /mnt/data                   = /mnt = a common place to mount things
 
 --- Step 10 ----------------------------------------
 This is just a lab, so restore the original fstab.
@@ -100,6 +165,13 @@ This is just a lab, so restore the original fstab.
   $ tail -3 /etc/fstab
   You should see:
     The vg_lab line is gone.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    cp                          = Copy files
+    /etc/fstab.bak              = your backup copy of fstab
+    /etc/fstab                  = the list of filesystems to mount at boot
+    tail                        = Show the last lines of a file (default 10)
+    -3                          = show the last 3 lines
 
 --- Step 11 ----------------------------------------
 Bonus reading: next month we'll connect to the office file server.
@@ -113,6 +185,13 @@ Learn the two mount commands now.
   Why:
     Exam keywords: NFS = Linux shares (server:/path). SMB/CIFS/Samba =
     Windows shares (//server/share).
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    mount                       = Attach a filesystem to a folder
+    -t nfs                      = filesystem type
+    /mnt/nfs                    = /mnt = a common place to mount things
+    -t cifs                     = filesystem type
+    -o username=bob             = mount options
 
 STUCK?
   * target is busy

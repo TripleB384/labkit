@@ -16,6 +16,10 @@ Refresh the server's list of available software first.
   $ sudo apt update
   You should see:
     Hit / Get lines ... Reading package lists... Done
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    update                      = download the latest list of available packages
 
 --- Step 2 ----------------------------------------
 Jordan wants a fun tool for the team chat. Check it out before
@@ -26,6 +30,18 @@ installing anything.
     Installed: (none)
     Candidate: 3.x
     Depends: libtext-charwidth-perl, perl:any
+  What each part means:
+    apt-cache                   = Ask apt's package database questions
+    policy                      = show the installed and available versions
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    show                        = show a package's details
+    2>                          = save only errors to a file
+    /dev/null                   = the trash can: anything sent here disappears
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    -E                          = extended regex (lets | mean OR)
+    "^(Package|Version|Depends)"
+        = the pattern to search for; ^ = start of line; | = OR
 
 --- Step 3 ----------------------------------------
 Install it and try it.
@@ -33,6 +49,12 @@ Install it and try it.
   $ /usr/games/cowsay "Pool Pros"
   You should see:
     A cow saying Pool Pros.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    install                     = install the package plus anything it needs
+    -y                          = answer yes automatically, no prompt
+    /usr/games/cowsay           = run this script or program
 
 --- Step 4 ----------------------------------------
 Marcus asks: what did that package install, and which package owns
@@ -44,6 +66,14 @@ the ls command?
     ii  cowsay ...  (ii = installed)
     The files it installed
     coreutils: /usr/bin/ls
+  What each part means:
+    dpkg                        = Low-level Debian package tool
+    -l                          = list packages and their status
+    -L                          = list the files a package installed
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -5                          = show the first 5 lines
+    -S                          = find which package owns a file
 
 --- Step 5 ----------------------------------------
 Freeze it so upgrades skip it, then unfreeze it.
@@ -54,6 +84,12 @@ Freeze it so upgrades skip it, then unfreeze it.
     cowsay set on hold.
     cowsay
     Canceled hold on cowsay.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    apt-mark                    = Mark packages in apt
+    hold                        = freeze it so upgrades skip it
+    showhold                    = list frozen packages
+    unhold                      = let upgrades touch it again
 
 --- Step 6 ----------------------------------------
 Find where this server gets its software, and which security keys it
@@ -68,6 +104,17 @@ trusts.
   Why:
     Ubuntu 22.04 keeps the main list in /etc/apt/sources.list. 24.04
     uses /etc/apt/sources.list.d/ubuntu.sources.
+  What each part means:
+    ls                          = List files
+    /etc/apt/sources.list       = apt's settings, repos and keys
+    2>                          = save only errors to a file
+    /dev/null                   = the trash can: anything sent here disappears
+    grep                        = Search text for lines matching a pattern
+    -rh                         = -r search inside folders; -h hide file names in the output
+    "^deb \|^URIs"              = the pattern to search for; ^ = start of line; | = OR
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -3                          = show the first 3 lines
 
 --- Step 7 ----------------------------------------
 Jordan prefers vim. Switch the server's default editor.
@@ -75,6 +122,11 @@ Jordan prefers vim. Switch the server's default editor.
   $ sudo update-alternatives --config editor
   You should see:
     A numbered menu: nano, vim.basic ... Type a number and press Enter.
+  What each part means:
+    update-alternatives         = Pick which program a generic name runs
+    --list                      = list the choices
+    sudo                        = Run the rest as root (admin)
+    --config                    = choose from a menu
 
 --- Step 8 ----------------------------------------
 Now Jordan's real request: install the nginx web server.
@@ -82,6 +134,16 @@ Now Jordan's real request: install the nginx web server.
   $ curl -s localhost | grep title
   You should see:
     <title>Welcome to nginx!</title>
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    install                     = install the package plus anything it needs
+    -y                          = answer yes automatically, no prompt
+    curl                        = Fetch a web address from the terminal
+    -s                          = silent: no progress bar
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    title                       = the pattern to search for
 
 --- Step 9 ----------------------------------------
 Put Jordan's landing page live.
@@ -93,6 +155,16 @@ Put Jordan's landing page live.
     <h1>Pool Pros on nginx</h1>
   Why:
     Config lives in /etc/nginx. Web files live in /var/www/html.
+  What each part means:
+    ls                          = List files
+    /etc/nginx/sites-enabled    = nginx's config folder
+    echo                        = Print text
+    |                           = pipe: send the output of the left command into the next one
+    sudo                        = Run the rest as root (admin)
+    tee                         = Show output on screen AND save it to a file
+    /var/www/html/index.html    = where nginx serves web pages from
+    curl                        = Fetch a web address from the terminal
+    -s                          = silent: no progress bar
 
 --- Step 10 ----------------------------------------
 Before any config reload, Marcus always tests the config. Do the
@@ -101,6 +173,10 @@ same.
   You should see:
     syntax is ok
     test is successful
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    nginx                       = The nginx web server program
+    -t                          = test the config for errors
 
 --- Step 11 ----------------------------------------
 Learn the difference between remove and purge (it matters for
@@ -114,6 +190,19 @@ leftover configs).
     rc  nginx-common ...  (rc = removed, config left)
     The config folder is still there.
     After purge: ls: cannot access '/etc/nginx'
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    remove                      = uninstall it, but keep its config files
+    -y                          = answer yes automatically, no prompt
+    dpkg                        = Low-level Debian package tool
+    -l                          = list packages and their status
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    nginx                       = the pattern to search for
+    ls                          = List files
+    /etc/nginx                  = nginx's config folder
+    purge                       = uninstall it AND delete its config files
 
 --- Step 12 ----------------------------------------
 Clean up the test tools, and check the sandboxed and Python package
@@ -124,6 +213,15 @@ tools.
   $ pip3 --version
   You should see:
     snap list shows snap apps (or 'command not found' on minimal installs). pip shows its version.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    purge                       = uninstall it AND delete its config files
+    -y                          = answer yes automatically, no prompt
+    autoremove                  = remove dependencies nothing needs anymore
+    snap                        = Snap sandboxed apps
+    list                        = list installed snaps
+    pip3                        = Python's package installer
 
 --- Step 13 ----------------------------------------
 Bonus reading: the same jobs on Red Hat and SUSE servers, which
@@ -139,6 +237,15 @@ other clients use.
     Nothing to run on Ubuntu.
   Why:
     Exam loves these: dnf = RHEL, zypper = SUSE, apt = Debian.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    dnf                         = Package manager on Red Hat / Rocky / Fedora
+    install                     = install a package
+    rpm                         = Low-level Red Hat package tool
+    -qf                         = query which package owns a file
+    --exclude=kernel*           = skip packages matching this name
+    zypper                      = Package manager on openSUSE
+    addlock                     = lock a package so it isn't updated
 
 STUCK?
   * Could not get lock /var/lib/dpkg/lock

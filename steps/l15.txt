@@ -18,6 +18,13 @@ Install the container tool Marcus picked.
   $ podman --version
   You should see:
     podman version 3.4.x (Ubuntu 22.04) or 4.x / 5.x (newer)
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    apt                         = Ubuntu/Debian package manager (installs software from repos)
+    install                     = install the package plus anything it needs
+    -y                          = answer yes automatically, no prompt
+    podman                      = Container engine (works like docker)
+    --version                   = show the version
 
 --- Step 2 ----------------------------------------
 Download a tiny Linux image to experiment with.
@@ -30,6 +37,10 @@ Download a tiny Linux image to experiment with.
   Why:
     Full names (docker.io/library/...) skip Podman's 'which registry?'
     question.
+  What each part means:
+    podman                      = Container engine (works like docker)
+    pull                        = download an image
+    images                      = list images you have
 
 --- Step 3 ----------------------------------------
 Run a throwaway container. Jordan asks: "Is it a VM?" Prove it
@@ -43,6 +54,14 @@ shares our kernel.
   Why:
     Different distro inside, same kernel. That's the container vs VM
     difference.
+  What each part means:
+    podman                      = Container engine (works like docker)
+    run                         = create and start a new container
+    --rm                        = delete the container when it exits
+    docker.io/library/alpine    = the image to run
+    cat                         = Print a file's contents
+    uname                       = System info
+    -r                          = kernel version
 
 --- Step 4 ----------------------------------------
 Run a test web server in a container and reach it from the server.
@@ -52,6 +71,20 @@ Run a test web server in a container and reach it from the server.
   You should see:
     CONTAINER ID  IMAGE ... PORTS 0.0.0.0:8080->80/tcp  NAMES web
     <title>Welcome to nginx!</title>
+  What each part means:
+    podman                      = Container engine (works like docker)
+    run                         = create and start a new container
+    -d                          = detached: run in the background
+    --name web                  = name the container
+    -p 8080:80                  = publish a port: host:container
+    docker.io/library/nginx:alpine
+        = the image to run
+    ps                          = list running containers
+    curl                        = Fetch a web address from the terminal
+    -s                          = silent: no progress bar
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    title                       = the pattern to search for
 
 --- Step 5 ----------------------------------------
 Debug like a pro: read its logs, peek at its config, and inspect its
@@ -63,6 +96,22 @@ status.
     nginx access lines (from your curl)
     server { listen 80; ...
     running map[80/tcp:[{0.0.0.0 8080}]]
+  What each part means:
+    podman                      = Container engine (works like docker)
+    logs                        = show a container's output
+    |                           = pipe: send the output of the left command into the next one
+    tail                        = Show the last lines of a file (default 10)
+    -3                          = show the last 3 lines
+    exec                        = run a command inside a running container
+    web                         = the container to run it in
+    cat                         = Print a file's contents
+    /etc/nginx/conf.d/default.conf
+        = nginx's config folder
+    head                        = Show the first lines of a file (default 10)
+    -5                          = show the first 5 lines
+    inspect                     = show a container's or image's full details
+    --format '{{.State.Status}} {{.NetworkSettings.Ports}}'
+        = pick exactly which fields to print
 
 --- Step 6 ----------------------------------------
 Jump inside the container, look around, and get back out.
@@ -71,6 +120,14 @@ Jump inside the container, look around, and get back out.
   $ exit
   You should see:
     A / # prompt. ps shows only nginx processes. exit returns you to the host.
+  What each part means:
+    podman                      = Container engine (works like docker)
+    exec                        = run a command inside a running container
+    -it                         = interactive terminal
+    web                         = the container to run it in
+    sh                          = Run a shell
+    ps                          = List processes
+    exit                        = Leave this shell
 
 --- Step 7 ----------------------------------------
 Stop it, find it in the list of stopped containers, and start it
@@ -81,6 +138,12 @@ again.
   $ podman start web
   You should see:
     ps is empty. ps -a shows web as Exited. Then it's running again.
+  What each part means:
+    podman                      = Container engine (works like docker)
+    stop                        = stop a container
+    ps                          = list running containers
+    -a                          = all (ps: include stopped; prune: all unused images)
+    start                       = start a stopped container
 
 --- Step 8 ----------------------------------------
 Build Jordan's landing page into our own image.
@@ -91,6 +154,17 @@ Build Jordan's landing page into our own image.
   You should see:
     STEP 1/4: FROM ... STEP 2/4: COPY ...
     Successfully tagged localhost/poolsite:1.0
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~/linuxlab2/container       = ~ = your home folder
+    cat                         = Print a file's contents
+    podman                      = Container engine (works like docker)
+    build                       = build an image from a Containerfile
+    -t poolsite:1.0             = tag (name:version) for the built image
+    images                      = list images you have
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    poolsite                    = the pattern to search for
 
 --- Step 9 ----------------------------------------
 Run our image, and tag it as the latest version.
@@ -103,12 +177,34 @@ Run our image, and tag it as the latest version.
     Two tags, SAME image ID.
   Why:
     A tag is just another name for the same image.
+  What each part means:
+    podman                      = Container engine (works like docker)
+    run                         = create and start a new container
+    -d                          = detached: run in the background
+    --name pool                 = name the container
+    -p 8081:80                  = publish a port: host:container
+    poolsite:1.0                = the image to run
+    curl                        = Fetch a web address from the terminal
+    -s                          = silent: no progress bar
+    tag                         = give an image another name
+    images                      = list images you have
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    poolsite                    = the pattern to search for
 
 --- Step 10 ----------------------------------------
 Pass the shop name in as a setting (environment variable).
   $ podman run --rm -e SHOP=PoolPros docker.io/library/alpine sh -c 'echo Hello from $SHOP'
   You should see:
     Hello from PoolPros
+  What each part means:
+    podman                      = Container engine (works like docker)
+    run                         = create and start a new container
+    --rm                        = delete the container when it exits
+    -e SHOP=PoolPros            = set an environment variable
+    docker.io/library/alpine    = the image to run
+    sh                          = Run a shell
+    -c                          = run this command string
 
 --- Step 11 ----------------------------------------
 Jordan needs data that survives restarts. Show him a volume.
@@ -119,6 +215,19 @@ Jordan needs data that survives restarts. Show him a volume.
   You should see:
     saved  (the first container is gone, the data isn't)
     The path on the host where it's stored.
+  What each part means:
+    podman                      = Container engine (works like docker)
+    volume                      = manage volumes
+    create                      = create
+    run                         = create and start a new container
+    --rm                        = delete the container when it exits
+    -v pooldata:/data           = mount a volume: volume:/path inside
+    docker.io/library/alpine    = the image to run
+    sh                          = Run a shell
+    -c                          = run this command string
+    cat                         = Print a file's contents
+    inspect                     = show a container's or image's full details
+    --format '{{.Mountpoint}}'  = pick exactly which fields to print
 
 --- Step 12 ----------------------------------------
 The API container and the website must talk to each other. Put them
@@ -136,6 +245,33 @@ on one network.
   Why:
     Podman 4+ also lets you use the name: http://api. Podman 3.4 on
     Ubuntu 22.04 needs an extra plugin for names, so we use the IP.
+  What each part means:
+    podman                      = Container engine (works like docker)
+    network                     = manage networks
+    create                      = create
+    run                         = create and start a new container
+    -d                          = detached: run in the background
+    --name api                  = name the container
+    --network poolnet           = join this network
+    docker.io/library/nginx:alpine
+        = the image to run
+    API_IP=                     = save the result in a variable named API_IP
+    $(podman inspect api --format '{{.NetworkSettings.Networks.poolnet.IPAddress}}')
+        = $( ) runs the command inside and pastes its result here
+    inspect                     = show a container's or image's full details
+    --format '{{.NetworkSettings.Networks.poolnet.IPAddress}}'
+        = pick exactly which fields to print
+    echo                        = Print text
+    $API_IP                     = the value saved in the variable API_IP
+    --rm                        = delete the container when it exits
+    docker.io/library/alpine    = the image to run
+    wget                        = Download a web address
+    -qO-                        = quiet, and print the page on screen instead of saving it
+    http://$API_IP              = a web address built from that variable
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    title                       = the pattern to search for
+    ls                          = list
 
 --- Step 13 ----------------------------------------
 Marcus explains why we never use --privileged unless we must. See
@@ -148,6 +284,16 @@ what it unlocks.
   Why:
     --privileged hands out extra powers. Avoid it unless you truly need
     it.
+  What each part means:
+    podman                      = Container engine (works like docker)
+    run                         = create and start a new container
+    --rm                        = delete the container when it exits
+    docker.io/library/alpine    = the image to run
+    mount                       = Attach a filesystem to a folder
+    -t tmpfs                    = filesystem type
+    --privileged                = give the container almost full host access
+    sh                          = Run a shell
+    -c                          = run this command string
 
 --- Step 14 ----------------------------------------
 Ship it! Then clean up everything from testing.
@@ -159,6 +305,17 @@ Ship it! Then clean up everything from testing.
   $ podman images
   You should see:
     Both lists are empty (or nearly).
+  What each part means:
+    podman                      = Container engine (works like docker)
+    rm                          = delete containers
+    -f                          = force
+    network                     = manage networks
+    volume                      = manage volumes
+    image                       = manage images
+    prune                       = delete unused ones
+    -a                          = all (ps: include stopped; prune: all unused images)
+    ps                          = list running containers
+    images                      = list images you have
 
 STUCK?
   * Error pulling: Forbidden / connection refused

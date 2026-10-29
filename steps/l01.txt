@@ -18,6 +18,11 @@ what's in it.
   $ cd ~/linuxlab && ls
   You should see:
     access.log  app.log  config  customers.csv  reports  scripts  servers.txt
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~/linuxlab                  = ~ = your home folder
+    &&                          = run the next command only if this one worked
+    ls                          = List files
 
 --- Step 2 ----------------------------------------
 Dana wants a list of what's in that folder, saved to a file she can
@@ -28,6 +33,10 @@ read later. Save the list to listing.txt.
     Same list, but listing.txt is in it too.
   Why:
     Why? The shell creates listing.txt BEFORE ls runs.
+  What each part means:
+    ls                          = List files
+    >                           = save output to a file (overwrites it)
+    cat                         = Print a file's contents
 
 --- Step 3 ----------------------------------------
 Marcus warns you: one arrow wipes a file, two arrows add to it.
@@ -43,6 +52,11 @@ log.
     second
     ...then only:
     third
+  What each part means:
+    echo                        = Print text
+    >                           = save output to a file (overwrites it)
+    >>                          = add output to the end of a file
+    cat                         = Print a file's contents
 
 --- Step 4 ----------------------------------------
 A script on this server keeps failing, and Marcus only wants the
@@ -53,6 +67,10 @@ errors.txt.
   You should see:
     Nothing on screen at first. Then:
     ls: cannot access 'nosuchfile': No such file or directory
+  What each part means:
+    ls                          = List files
+    2>                          = save only errors to a file
+    cat                         = Print a file's contents
 
 --- Step 5 ----------------------------------------
 Now Marcus wants everything, the good output AND the errors, in one
@@ -62,6 +80,11 @@ file he can send to the vendor.
   You should see:
     ls: cannot access 'nosuchfile': No such file or directory
     customers.csv
+  What each part means:
+    ls                          = List files
+    >                           = save output to a file (overwrites it)
+    2>&1                        = send errors to the same place as normal output
+    cat                         = Print a file's contents
 
 --- Step 6 ----------------------------------------
 Marcus: "This is the mistake I made on my first job." Put 2>&1 in
@@ -73,6 +96,11 @@ the wrong spot and see where the errors end up.
     trap.txt only has: customers.csv
   Why:
     When 2>&1 ran, stdout still pointed at the screen. Order matters.
+  What each part means:
+    ls                          = List files
+    2>&1                        = send errors to the same place as normal output
+    >                           = save output to a file (overwrites it)
+    cat                         = Print a file's contents
 
 --- Step 7 ----------------------------------------
 A nightly job fills the screen with harmless errors. Send them to
@@ -84,6 +112,12 @@ the trash, then check the exit code so you still know if it failed.
   Why:
     $? = exit code of the last command. 0 means success. Anything else
     means it failed.
+  What each part means:
+    ls                          = List files
+    2>                          = save only errors to a file
+    /dev/null                   = the trash can: anything sent here disappears
+    echo                        = Print text
+    $?                          = exit code of the last command (0 = worked)
 
 --- Step 8 ----------------------------------------
 Dana asks: "How many errors did the app log today?" Show them on
@@ -93,6 +127,13 @@ screen AND save a copy for her report, all in one go.
   You should see:
     3 ERROR lines on screen, then:
     3 errors-only.txt
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    ERROR                       = the pattern to search for
+    |                           = pipe: send the output of the left command into the next one
+    tee                         = Show output on screen AND save it to a file
+    wc                          = Count lines, words, bytes
+    -l                          = count lines
 
 --- Step 9 ----------------------------------------
 Count the customer records two ways. Notice what changes when you
@@ -104,6 +145,10 @@ feed the file in with <.
     13 customers.csv
   Why:
     With < the command never sees the file name, so it can't print it.
+  What each part means:
+    wc                          = Count lines, words, bytes
+    -l                          = count lines
+    <                           = feed a file in as input
 
 --- Step 10 ----------------------------------------
 Start a to-do list for your first week by typing it straight into a
@@ -116,6 +161,14 @@ file. Type EOF on its own line when you're done.
   You should see:
     check pumps
     call Ana
+  What each part means:
+    cat                         = Print a file's contents
+    <<                          = here-doc: the lines below are input, until the stop word
+    EOF                         = the stop word. Type it alone on the last line to finish
+    >                           = save output to a file (overwrites it)
+    check pumps                 = a line of text going into the file
+    call Ana                    = a line of text going into the file
+    EOF                         = the stop word: ends the here-doc
 
 --- Step 11 ----------------------------------------
 Quick one: a vendor wants a message in all caps. Convert it with a
@@ -123,6 +176,11 @@ here-string.
   $ tr a-z A-Z <<< "hello linux"
   You should see:
     HELLO LINUX
+  What each part means:
+    tr                          = Translate characters: swap the first set for the second
+    a-z                         = a-z = every lowercase letter...
+    A-Z                         = ...becomes the matching uppercase letter
+    <<<                         = here-string: feed this one string in as input
 
 STUCK?
   * No such file or directory on cd

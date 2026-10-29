@@ -18,6 +18,13 @@ recent commands.
   $ history | tail -5
   You should see:
     Your last 5 commands, each with a number.
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~/linuxlab                  = ~ = your home folder
+    history                     = List the commands you typed before
+    |                           = pipe: send the output of the left command into the next one
+    tail                        = Show the last lines of a file (default 10)
+    -5                          = show the last 5 lines
 
 --- Step 2 ----------------------------------------
 Count today's errors again, then rerun it without retyping, using
@@ -27,6 +34,11 @@ Marcus's favorite shortcut.
   You should see:
     3
     (bash shows the command again, then) 3
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    -c                          = count matching lines
+    ERROR                       = the pattern to search for
+    !!                          = Rerun the last command you typed
 
 --- Step 3 ----------------------------------------
 You ran an awk command earlier but forgot it. Search your history
@@ -34,6 +46,10 @@ for it with Ctrl+R.
     (Press Ctrl+R, type: awk)
   You should see:
     Your last awk command appears. Enter runs it. Ctrl+G cancels.
+  What each part means:
+    Ctrl+R
+        = search your past commands as you type (Enter runs it, Ctrl+G
+        cancels)
 
 --- Step 4 ----------------------------------------
 Finance asks for average revenue per customer. Notice which math
@@ -45,6 +61,12 @@ method drops the cents.
     102.33
   Why:
     $(( )) drops decimals. bc keeps them.
+  What each part means:
+    echo                        = Print text
+    $((1228 / 12))              = $(( )) = shell math (whole numbers only)
+    "scale=2; 1228 / 12"        = bc input: scale=2 = keep 2 decimal places
+    |                           = pipe: send the output of the left command into the next one
+    bc                          = Calculator that handles decimals
 
 --- Step 5 ----------------------------------------
 Make the plan prices look tidy for a quick price sheet.
@@ -54,6 +76,10 @@ Make the plan prices look tidy for a quick price sheet.
     Basic       59.50
   Why:
     printf reuses the format for each pair of values.
+  What each part means:
+    printf
+        = Print text with a format (%s text, %6.2f number with 2 decimals,
+        \n new line)
 
 --- Step 6 ----------------------------------------
 Marcus wants the unique server names on one line so he can paste
@@ -61,6 +87,12 @@ them into a ticket.
   $ sort -u servers.txt | xargs echo "Servers:"
   You should see:
     Servers: cache01 db01 web01 web02
+  What each part means:
+    sort                        = Sort lines
+    -u                          = unique: drop duplicates
+    |                           = pipe: send the output of the left command into the next one
+    xargs                       = Turn input lines into arguments for a command
+    echo                        = Print text
 
 --- Step 7 ----------------------------------------
 Tired of typing ls -lh? Make a shortcut for it, then remove it.
@@ -69,6 +101,11 @@ Tired of typing ls -lh? Make a shortcut for it, then remove it.
   $ unalias ll
   You should see:
     ll shows a long listing. After unalias, ll is gone.
+  What each part means:
+    alias                       = Make a shortcut name for a longer command
+    ll='ls -lh'                 = name=command: 'll' will run 'ls -lh
+    ll                          = your new shortcut (it runs ls -lh)
+    unalias                     = Remove a shortcut
 
 --- Step 8 ----------------------------------------
 Marcus explains why his settings vanished last week: he ran a script
@@ -84,6 +121,13 @@ instead of sourcing it. See the difference yourself.
   Why:
     bash runs it in a separate shell, so the variable disappears. source
     runs it in yours.
+  What each part means:
+    echo                        = Print text
+    >                           = save output to a file (overwrites it)
+    bash
+        = Run the script in a NEW bash shell (its variables vanish when it
+        ends)
+    source                      = Run a file in YOUR current shell, so its variables stay
 
 --- Step 9 ----------------------------------------
 Get to know this server: your home folder, your shell, and where it
@@ -94,6 +138,17 @@ looks for commands.
   $ cd -
   You should see:
     Your home and shell, then each PATH folder on its own line. cd - jumps back to ~/linuxlab.
+  What each part means:
+    echo                        = Print text
+    $HOME                       = your home folder
+    $SHELL                      = your login shell
+    $PATH                       = folders searched for commands
+    |                           = pipe: send the output of the left command into the next one
+    tr                          = Translate characters: swap the first set for the second
+    ':'                         = the characters to replace
+    '\n'                        = what they become (\n = new line)
+    cd                          = Change directory (move to another folder)
+    -                           = go back to the folder you were just in
 
 --- Step 10 ----------------------------------------
 The vendor's support form asks for the kernel version and CPU type.
@@ -103,6 +158,10 @@ Grab both.
   You should see:
     A kernel version like 6.x.x-xx-generic
     x86_64 (or aarch64)
+  What each part means:
+    uname                       = System info
+    -r                          = kernel version
+    -m                          = CPU architecture
 
 --- Step 11 ----------------------------------------
 Now the real fix. Back up the app config first (Marcus's rule), then
@@ -111,6 +170,9 @@ open it in vim.
   $ vim config/app.conf
   You should see:
     The file opens. You're in Normal mode.
+  What each part means:
+    cp                          = Copy files
+    vim                         = vim text editor (i = type, Esc = stop typing, :wq = save and quit)
 
 --- Step 12 ----------------------------------------
 In vim: switch debug off, add a timezone line at the bottom, then
@@ -126,6 +188,14 @@ save and quit.
   Why:
     G = go to last line. o = open a new line below and switch to Insert
     mode.
+  What each part means:
+    :%s/debug=true/debug=false/
+        = vim: % = every line, s/old/new/ = substitute
+    G                           = jump to the last line
+    o                           = open a new line below and start typing
+    timezone=UTC                = the text you type
+    Esc                         = stop typing (back to Normal mode)
+    :wq                         = write (save) and quit
 
 --- Step 13 ----------------------------------------
 Prove exactly what you changed, so Marcus can review it.
@@ -135,12 +205,16 @@ Prove exactly what you changed, so Marcus can review it.
     ---
     > debug=false
     plus an added timezone=UTC line
+  What each part means:
+    diff                        = Show the lines that differ between two files
 
 --- Step 14 ----------------------------------------
 Add "fixed debug mode" to your to-do list using nano.
   $ nano todo.txt
   You should see:
     Type a new line, press Ctrl+O then Enter to save, Ctrl+X to exit.
+  What each part means:
+    nano                        = Simple text editor (Ctrl+O save, Ctrl+X exit)
 
 STUCK?
   * Stuck in vim

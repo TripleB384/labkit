@@ -20,6 +20,10 @@ in.
   $ groups
   You should see:
     Your username, then uid=1000(you) gid=1000(you) groups=...,sudo,...
+  What each part means:
+    whoami                      = Your username
+    id                          = Show user ID, group ID and groups
+    groups                      = Show which groups you're in
 
 --- Step 2 ----------------------------------------
 Read Priya's new-hire list and create the sales and support teams as
@@ -33,6 +37,14 @@ groups.
     4 people: areyes, bcarter, cdiaz, dpatel
     sales:x:1001:
     support:x:1002:  (numbers may differ)
+  What each part means:
+    cd                          = Change directory (move to another folder)
+    ~/linuxlab2                 = ~ = your home folder
+    cat                         = Print a file's contents
+    sudo                        = Run the rest as root (admin)
+    groupadd                    = Create a group
+    getent                      = Look up entries in system databases
+    group                       = look in the group list
 
 --- Step 3 ----------------------------------------
 Set up Ana's account: home folder, full name, bash shell, and the
@@ -43,6 +55,16 @@ sales group.
   You should see:
     uid=1001(areyes) gid=1003(areyes) groups=1003(areyes),1001(sales)
     areyes:x:1001:1003:Ana Reyes:/home/areyes:/bin/bash
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    useradd                     = Create a user account
+    -m                          = make a home folder
+    -c "Ana Reyes"              = comment: the full name
+    -s /bin/bash                = login shell
+    -G sales                    = extra groups
+    id                          = Show user ID, group ID and groups
+    getent                      = Look up entries in system databases
+    passwd                      = look in the user account list
 
 --- Step 4 ----------------------------------------
 Give Ana her temporary password, then peek at how Linux stores it.
@@ -53,6 +75,16 @@ Give Ana her temporary password, then peek at how Linux stores it.
   Why:
     chpasswd sets passwords without the prompt. Fine for practice, never
     with real passwords.
+  What each part means:
+    echo                        = Print text
+    |                           = pipe: send the output of the left command into the next one
+    sudo                        = Run the rest as root (admin)
+    chpasswd                    = Set passwords from 'user:password' lines
+    grep                        = Search text for lines matching a pattern
+    areyes                      = the pattern to search for
+    /etc/shadow                 = password hashes (root only)
+    cut                         = Cut out columns or characters from each line
+    -c1-40                      = which character positions to keep → 1-40
 
 --- Step 5 ----------------------------------------
 Create both support hires in one go, straight from Priya's CSV.
@@ -60,6 +92,23 @@ Create both support hires in one go, straight from Priya's CSV.
   $ getent group support
   You should see:
     support:x:1002:bcarter,cdiaz
+  What each part means:
+    grep                        = Search text for lines matching a pattern
+    support                     = the pattern to search for
+    |                           = pipe: send the output of the left command into the next one
+    while                       = Loop: keep going while the next command works
+    IFS=                        = save the result in a variable named IFS
+    read                        = Read one line into variables
+    ;                           = then run the next command
+    do                          = start of the loop body
+    sudo                        = Run the rest as root (admin)
+    useradd                     = Create a user account
+    -m                          = make a home folder
+    -c "$name"                  = comment: the full name
+    -G "$dept"                  = extra groups
+    done                        = end of the loop
+    getent                      = Look up entries in system databases
+    group                       = look in the group list
 
 --- Step 6 ----------------------------------------
 Priya: "Ben will also help sales." Add him to sales without kicking
@@ -68,6 +117,13 @@ him out of support.
   $ id bcarter
   You should see:
     groups=...(bcarter),...(support),...(sales)  (kept support, added sales)
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    usermod                     = Change a user account
+    -aG sales
+        = -a append (use with -G so you ADD a group); -G set extra groups
+        (alone = REPLACE them all)
+    id                          = Show user ID, group ID and groups
 
 --- Step 7 ----------------------------------------
 Marcus shows you a mistake to never make, using Carla's account.
@@ -79,6 +135,11 @@ Watch what she loses.
   Why:
     Without -a, -G replaces the list. Fix: sudo usermod -aG support
     cdiaz
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    usermod                     = Change a user account
+    -G sales                    = set extra groups (alone = REPLACE them all)
+    id                          = Show user ID, group ID and groups
 
 --- Step 8 ----------------------------------------
 Ana's on vacation next week. Lock her account, check it, then unlock
@@ -92,6 +153,18 @@ it when she's back.
     areyes L ...  (L = locked)
     areyes:!$y$j  (the ! blocks the password)
     areyes P ...  (P = usable password)
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    passwd                      = Set a password or change account lock state
+    -l                          = lock the password
+    -S                          = show status (L = locked, P = usable)
+    grep                        = Search text for lines matching a pattern
+    areyes                      = the pattern to search for
+    /etc/shadow                 = password hashes (root only)
+    |                           = pipe: send the output of the left command into the next one
+    cut                         = Cut out columns or characters from each line
+    -c1-12                      = which character positions to keep → 1-12
+    -u                          = unlock it
 
 --- Step 9 ----------------------------------------
 Company policy: change passwords every 90 days, with a 7-day
@@ -103,6 +176,13 @@ warning. Ana must change hers at first login.
     Last password change : password must be changed
     Maximum number of days ... : 90
     Number of days of warning ... : 7
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    chage                       = Password aging settings for a user
+    -M 90                       = max days before the password must change
+    -W 7                        = days of warning before it expires
+    -d 0                        = set the 'last changed' date (0 = must change at next login)
+    -l                          = list the user's aging settings
 
 --- Step 10 ----------------------------------------
 Ben is on a contract through December 31. Set his account to expire
@@ -111,6 +191,14 @@ then.
   $ sudo chage -l bcarter | grep "Account expires"
   You should see:
     Account expires : Dec 31, 2026
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    chage                       = Password aging settings for a user
+    -E 2026-12-31               = date the whole account expires
+    -l                          = list the user's aging settings
+    |                           = pipe: send the output of the left command into the next one
+    grep                        = Search text for lines matching a pattern
+    "Account expires"           = the pattern to search for
 
 --- Step 11 ----------------------------------------
 Carla's account is only for a service. Block her from logging in at
@@ -121,6 +209,14 @@ all.
   You should see:
     ...:/home/cdiaz:/usr/sbin/nologin
     This account is currently not available.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    usermod                     = Change a user account
+    -s /usr/sbin/nologin        = change the login shell
+    getent                      = Look up entries in system databases
+    passwd                      = look in the user account list
+    su                          = Switch user
+    -                           = full login as that user
 
 --- Step 12 ----------------------------------------
 Priya wants every new hire to get a welcome note. Add it to the
@@ -132,6 +228,16 @@ template, then create Dev's account.
     .  ..  .bash_logout  .bashrc  .profile  WELCOME.txt
   Why:
     Only NEW users get it. Ana's home doesn't change.
+  What each part means:
+    echo                        = Print text
+    |                           = pipe: send the output of the left command into the next one
+    sudo                        = Run the rest as root (admin)
+    tee                         = Show output on screen AND save it to a file
+    /etc/skel/WELCOME.txt       = template copied into every new home folder
+    useradd                     = Create a user account
+    -m                          = make a home folder
+    ls                          = List files
+    -a                          = show hidden files too
 
 --- Step 13 ----------------------------------------
 Marcus asks how to tell real people from system accounts. Use the
@@ -144,6 +250,24 @@ UID ranges.
     root, daemon, bin, sys, sync ...
     UID_MIN 1000
     UID_MAX 60000
+  What each part means:
+    awk                         = Column tool and mini language: splits lines into fields $1, $2 ...
+    -F:                         = field separator: what splits the columns → :
+    '$3>=1000 && $3<65000 {print $1, $3}'
+        = the awk program: $1, $2 ... = column 1, column 2 ...; $3 = the UID
+        column; print = output these
+    /etc/passwd                 = the user account list
+    '$3<1000 {print $1}'
+        = the awk program: $1, $2 ... = column 1, column 2 ...; print =
+        output these
+    |                           = pipe: send the output of the left command into the next one
+    head                        = Show the first lines of a file (default 10)
+    -5                          = show the first 5 lines
+    grep                        = Search text for lines matching a pattern
+    -E                          = extended regex (lets | mean OR)
+    "^UID_MIN|^UID_MAX"
+        = the pattern to search for; ^ = start of line; | = OR
+    /etc/login.defs             = account defaults like UID ranges
 
 --- Step 14 ----------------------------------------
 Support is being renamed Customer Care. Rename the group, then check
@@ -156,6 +280,16 @@ who's logged in.
   You should see:
     customer-care:x:1002:bcarter
     Then your session(s) and recent logins.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    groupmod                    = Change a group
+    -n customer-care            = give it a new name
+    getent                      = Look up entries in system databases
+    group                       = look in the group list
+    who                         = Who's logged in
+    w                           = Who's logged in and what they're doing
+    last                        = Login history
+    -n 5                        = only the last 5 entries
 
 --- Step 15 ----------------------------------------
 Offboarding day. Remove Dev the proper way, and Ana the lazy way,
@@ -167,6 +301,11 @@ and see what's left behind.
     dpatel's home is gone. areyes is still in /home.
   Why:
     Without -r the files stay behind, owned by a UID nobody has now.
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    userdel                     = Delete a user account
+    -r                          = also delete their home folder
+    ls                          = List files
 
 --- Step 16 ----------------------------------------
 Wrap up: clean out the remaining test accounts and groups.
@@ -178,6 +317,16 @@ Wrap up: clean out the remaining test accounts and groups.
   $ sudo rm /etc/skel/WELCOME.txt
   You should see:
     No output = all removed. (A 'mail spool not found' note is fine.)
+  What each part means:
+    sudo                        = Run the rest as root (admin)
+    userdel                     = Delete a user account
+    -r                          = also delete their home folder
+    rm                          = Delete files
+    -rf
+        = -r recursive: folders and everything in them; -f force: no
+        questions, no errors
+    groupdel                    = Delete a group
+    /etc/skel/WELCOME.txt       = template copied into every new home folder
 
 STUCK?
   * useradd: user 'areyes' already exists
