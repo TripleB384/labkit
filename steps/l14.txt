@@ -2,9 +2,19 @@ LESSON 14: systemd   (Linux+ objective 2.5)
 ============================================================
 Setup needed first: bash ~/labkit/u2.sh
 
-GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and replace a cron job with a timer.
+TICKET PP-114
+From:    Marcus Bell, Senior Sysadmin (your mentor)
+Subject: Make poolapp a real service
 
---- Step 1: Look at systemd itself.
+  Right now poolapp only runs if someone starts it by hand, and it
+  dies when it crashes. Turn it into a proper systemd service that
+  starts at boot and restarts itself if it crashes. Then move the
+  nightly report from cron to a systemd timer. The unit files are
+  ready in ~/linuxlab2/units.
+
+--- Step 1 ----------------------------------------
+Get to know the boss process. See systemd at PID 1 and what's
+already running.
   $ ps -p 1 -o pid,comm
   $ systemctl get-default
   $ systemctl list-units --type=service --state=running | head
@@ -13,7 +23,9 @@ GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and 
     multi-user.target or graphical.target
     A list: cron.service, ssh.service ...
 
---- Step 2: Check a service that's already there.
+--- Step 2 ----------------------------------------
+Look at a service that's already set up properly, cron, as an
+example.
   $ systemctl status cron --no-pager
   $ systemctl is-enabled cron
   $ systemctl is-active cron
@@ -22,7 +34,8 @@ GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and 
     enabled
     active
 
---- Step 3: Read the unit file made for the fake app.
+--- Step 3 ----------------------------------------
+Read the unit file prepared for poolapp.
   $ cd ~/linuxlab2
   $ cat units/poolapp.service
   You should see:
@@ -30,7 +43,8 @@ GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and 
     [Service] ExecStart=/home/<you>/linuxlab2/scripts/poolapp.sh, Restart=on-failure
     [Install] WantedBy=multi-user.target
 
---- Step 4: Install it, tell systemd, start it.
+--- Step 4 ----------------------------------------
+Install the service, tell systemd about it, and start it.
   $ sudo cp units/poolapp.service /etc/systemd/system/
   $ sudo systemctl daemon-reload
   $ sudo systemctl start poolapp
@@ -39,20 +53,25 @@ GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and 
     Active: active (running)
     Main PID: 2345 (poolapp.sh)
 
---- Step 5: Check that it's working.
+--- Step 5 ----------------------------------------
+Confirm poolapp is actually doing its job.
   $ sleep 6; tail -3 poolapp.log
   You should see:
     HH:MM:SS poolapp heartbeat (new lines every 5 seconds)
 
---- Step 6: Enable it at boot.
+--- Step 6 ----------------------------------------
+Make it start on every boot.
   $ sudo systemctl enable poolapp
   $ systemctl is-enabled poolapp
   You should see:
     Created symlink /etc/systemd/system/multi-user.target.wants/poolapp.service → ...
     enabled
-  Why: Enable = a symlink in the target's .wants folder. That's all it is.
+  Why:
+    Enable = a symlink in the target's .wants folder. That's all it is.
 
---- Step 7: Crash it on purpose. Restart=on-failure brings it back.
+--- Step 7 ----------------------------------------
+Rosa's question: "What happens if it crashes?" Crash it on purpose
+and watch it come back.
   $ systemctl show poolapp -p MainPID
   $ sudo kill -9 $(pgrep poolapp)
   $ sleep 2
@@ -62,7 +81,9 @@ GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and 
     MainPID= changes to a NEW number.
     The journal says: Main process exited, code=killed, status=9/KILL ... Scheduled restart job
 
---- Step 8: Mask it, try to start it, unmask.
+--- Step 8 ----------------------------------------
+Maintenance window: block poolapp from starting at all, prove it,
+then unblock it.
   $ sudo systemctl stop poolapp
   $ sudo systemctl mask poolapp
   $ sudo systemctl start poolapp
@@ -72,23 +93,29 @@ GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and 
     Failed to start poolapp.service: Unit poolapp.service is masked.
     Removed ...
 
---- Step 9: Add an override with systemctl edit.
+--- Step 9 ----------------------------------------
+Marcus wants it to ALWAYS restart, not just on failure. Add an
+override without editing the original file.
   $ sudo systemctl edit poolapp
   You should see:
     An editor opens. Between the comment lines that say to add content, type:
     [Service]
     Restart=always
     Then save and exit (nano: Ctrl+O, Enter, Ctrl+X).
-  Why: systemd saves it as /etc/systemd/system/poolapp.service.d/override.conf
+  Why:
+    systemd saves it as
+    /etc/systemd/system/poolapp.service.d/override.conf
 
---- Step 10: Confirm the override.
+--- Step 10 ----------------------------------------
+Confirm systemd picked up the override.
   $ systemctl cat poolapp
   $ systemctl show poolapp -p Restart
   You should see:
     The main file, then # /etc/systemd/system/poolapp.service.d/override.conf
     Restart=always
 
---- Step 11: Replace a cron job with a timer.
+--- Step 11 ----------------------------------------
+Move the nightly report from cron to a systemd timer.
   $ sudo cp units/poolreport.service units/poolreport.timer /etc/systemd/system/
   $ sudo systemctl daemon-reload
   $ sudo systemctl enable --now poolreport.timer
@@ -96,14 +123,17 @@ GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and 
   You should see:
     NEXT ... LEFT ... poolreport.timer  poolreport.service
 
---- Step 12: Wait a minute, then check that it ran.
+--- Step 12 ----------------------------------------
+Wait a minute, then confirm the timer ran the report.
   $ cat report.log
   $ sudo journalctl -u poolreport -n 3 --no-pager
   You should see:
     ... nightly report ran
     Started poolreport.service ... Finished ...
 
---- Step 13: Boot speed and the *ctl tools.
+--- Step 13 ----------------------------------------
+Rosa says boot feels slow. Check boot time, plus the hostname,
+clock, DNS and kernel settings.
   $ systemd-analyze
   $ systemd-analyze blame | head -5
   $ hostnamectl
@@ -118,14 +148,16 @@ GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and 
     DNS servers
     net.ipv4.ip_forward = 0
 
---- Step 14: Logs: errors since boot, then follow live.
+--- Step 14 ----------------------------------------
+Check for errors since boot, then watch poolapp's logs live.
   $ sudo journalctl -b -p err --no-pager | tail -5
   $ sudo journalctl -u poolapp -f
     (press Ctrl+C to stop)
   You should see:
     Recent errors (if any). Then live heartbeat start/stop lines.
 
---- Step 15: Clean up.
+--- Step 15 ----------------------------------------
+Lab done. Remove the test service and timer cleanly.
   $ sudo systemctl disable --now poolapp poolreport.timer
   $ sudo rm -r /etc/systemd/system/poolapp.service /etc/systemd/system/poolapp.service.d /etc/systemd/system/poolreport.*
   $ sudo systemctl daemon-reload
@@ -135,7 +167,16 @@ GOAL: Turn the fake app into a real systemd service, watch it auto-restart, and 
     Unit poolapp.service could not be found.
 
 STUCK?
-  * Failed to start: Unit not found: Did you run sudo systemctl daemon-reload after copying the file?
-  * status shows 'failed' with code=exited, status=203/EXEC: The script path is wrong or not executable. Rerun the Unit 2 setup, then copy the unit file again.
-  * Stuck in the systemctl edit editor: nano: Ctrl+X, then Y to save. vim: Esc, then :wq
-  * System has not been booted with systemd: You're in a container or WSL1. Use a full Linux VM.
+  * Failed to start: Unit not found
+      Did you run sudo systemctl daemon-reload after copying the file?
+  * status shows 'failed' with code=exited, status=203/EXEC
+      The script path is wrong or not executable. Rerun the Unit 2 setup,
+      then copy the unit file again.
+  * Stuck in the systemctl edit editor
+      nano: Ctrl+X, then Y to save. vim: Esc, then :wq
+  * System has not been booted with systemd
+      You're in a container or WSL1. Use a full Linux VM.
+
+DONE? Ticket PP-114 closed.
+  poolapp is a real service: starts at boot, survives crashes, and the
+  report runs on a timer.

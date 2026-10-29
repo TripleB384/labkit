@@ -2,39 +2,55 @@ LESSON 7: LVM   (Linux+ objective 1.3)
 ============================================================
 Setup needed first: sudo bash ~/labkit/u1-disks.sh
 
-GOAL: Pool two fake disks, carve out a volume, and grow it live while it's mounted.
+TICKET PP-107
+From:    Jordan Kim, Web Developer
+Subject: The uploads folder keeps running out of space
 
---- Step 1: Load disk names and turn DISK2 and DISK3 into PVs.
+  Customer photo uploads keep filling the disk, and I'm tired of
+  downtime when we resize. Marcus says LVM lets us grow storage while
+  it's in use. Can you set up a volume for uploads and show me it can
+  grow without unmounting?
+
+--- Step 1 ----------------------------------------
+Load the test disk names. Prepare DISK2 and DISK3 for LVM as
+physical volumes.
   $ source /tmp/disks.env
   $ sudo pvcreate $DISK2 $DISK3
   You should see:
     Physical volume "/dev/loopN" successfully created. (x2)
 
---- Step 2: List the PVs.
+--- Step 2 ----------------------------------------
+Confirm both disks are ready for LVM.
   $ sudo pvs
   You should see:
     Two PVs, about 300m each. The VG column is empty (not in a pool yet).
 
---- Step 3: Create a volume group from DISK2 only.
+--- Step 3 ----------------------------------------
+Start a storage pool (volume group) with just DISK2 for now.
   $ sudo vgcreate vg_lab $DISK2
   $ sudo vgs
   You should see:
     vg_lab  1 PV  ... VSize about 296m
-  Why: A few MB go to LVM's own metadata.
+  Why:
+    A few MB go to LVM's own metadata.
 
---- Step 4: Create a 100M logical volume.
+--- Step 4 ----------------------------------------
+Carve out a 100 MB volume for Jordan's uploads.
   $ sudo lvcreate -n lv_data -L 100M vg_lab
   $ sudo lvs
   You should see:
     lv_data  vg_lab  -wi-a-----  100.00m
 
---- Step 5: Both paths point to the same LV.
+--- Step 5 ----------------------------------------
+Jordan asks which device path to use. Show him both names point to
+the same volume.
   $ ls -l /dev/vg_lab/
   $ ls -l /dev/mapper/ | grep lv_data
   You should see:
     lv_data -> ../dm-0  (links to the same dm device)
 
---- Step 6: Format and mount it.
+--- Step 6 ----------------------------------------
+Format the volume and mount it where uploads will live.
   $ sudo mkfs.ext4 -q /dev/vg_lab/lv_data
   $ sudo mkdir -p /mnt/data
   $ sudo mount /dev/vg_lab/lv_data /mnt/data
@@ -42,20 +58,27 @@ GOAL: Pool two fake disks, carve out a volume, and grow it live while it's mount
   You should see:
     Size about 90M, mounted on /mnt/data
 
---- Step 7: Grow it by 100M while it's mounted.
+--- Step 7 ----------------------------------------
+Uploads are filling up. Grow the volume by 100 MB while it stays
+mounted.
   $ sudo lvextend -r -L +100M /dev/vg_lab/lv_data
   $ df -h /mnt/data
   You should see:
     Size now about 180–190M. No unmount needed.
-  Why: -r runs resize2fs for you. Without -r the LV grows but df still shows the old size.
+  Why:
+    -r runs resize2fs for you. Without -r the LV grows but df still
+    shows the old size.
 
---- Step 8: Try to grow more than the pool has.
+--- Step 8 ----------------------------------------
+Jordan wants another 200 MB. Try it and see what the pool says.
   $ sudo lvextend -r -L +200M /dev/vg_lab/lv_data
   You should see:
     Insufficient free space ...
-  Why: The pool (VG) is almost out of space.
+  Why:
+    The pool (VG) is almost out of space.
 
---- Step 9: Add DISK3 to the pool, then retry.
+--- Step 9 ----------------------------------------
+Add DISK3 to the pool, then give Jordan his 200 MB.
   $ sudo vgextend vg_lab $DISK3
   $ sudo vgs
   $ sudo lvextend -r -L +200M /dev/vg_lab/lv_data
@@ -64,16 +87,26 @@ GOAL: Pool two fake disks, carve out a volume, and grow it live while it's mount
     vg_lab now has 2 PVs, about 592m.
     The LV grows. df shows about 370–380M.
 
---- Step 10: See which disks the LV is stored on.
+--- Step 10 ----------------------------------------
+Marcus asks which physical disks the uploads now live on. Show him.
   $ sudo pvs
   $ sudo lvdisplay /dev/vg_lab/lv_data | head -12
   You should see:
     Both PVs now show used space. lvdisplay shows LV Size about 400 MiB.
 
 STUCK?
-  * Cannot use /dev/loopN: device is partitioned: That disk still has a partition table. Run: sudo wipefs -a $DISK2
-  * $DISK2 is empty: source /tmp/disks.env
-  * Volume group vg_lab not found: Check the spelling with sudo vgs. Or run the storage cleanup + setup and start this lab again.
-  * Want a fresh start: sudo bash ~/labkit/u1-clean.sh, then sudo bash ~/labkit/u1-disks.sh
+  * Cannot use /dev/loopN: device is partitioned
+      That disk still has a partition table. Run: sudo wipefs -a $DISK2
+  * $DISK2 is empty
+      source /tmp/disks.env
+  * Volume group vg_lab not found
+      Check the spelling with sudo vgs. Or run the storage cleanup + setup
+      and start this lab again.
+  * Want a fresh start
+      sudo bash ~/labkit/u1-clean.sh, then sudo bash ~/labkit/u1-disks.sh
 
 BEFORE YOU LEAVE: Leave lv_data mounted. Lesson 8 uses it.
+
+DONE? Ticket PP-107 closed.
+  Uploads volume is live and grew twice with zero downtime. Jordan
+  owes you a coffee.

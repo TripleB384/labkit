@@ -2,48 +2,69 @@ LESSON 8: Mounting & fstab   (Linux+ objective 1.3)
 ============================================================
 Setup needed first: sudo bash ~/labkit/u1-disks.sh
 
-GOAL: Use mount options to block programs, lock a filesystem read-only, and add a safe fstab entry.
+TICKET PP-108
+From:    Marcus Bell, Senior Sysadmin (your mentor)
+Subject: Lock down the uploads volume
 
---- Step 1: Check that lv_data from Lesson 7 is mounted.
+  Security review flagged something: people can upload files, and
+  someone could upload a script and run it from that folder. Lock the
+  uploads volume so nothing can execute from it, test read-only mode
+  for maintenance, and make it mount at boot without risking a failed
+  boot.
+
+--- Step 1 ----------------------------------------
+Confirm the uploads volume from yesterday's ticket is still mounted.
   $ findmnt /mnt/data
   You should see:
     /mnt/data  /dev/mapper/vg_lab-lv_data  ext4  rw,relatime
-  Why: Nothing printed? Run: sudo mount /dev/vg_lab/lv_data /mnt/data
+  Why:
+    Nothing printed? Run: sudo mount /dev/vg_lab/lv_data /mnt/data
 
---- Step 2: Find it in the kernel's live mount list.
+--- Step 2 ----------------------------------------
+Check the kernel's live list of mounts too.
   $ grep /mnt/data /proc/mounts
   You should see:
     /dev/mapper/vg_lab-lv_data /mnt/data ext4 rw,relatime 0 0
 
---- Step 3: Copy the lab script there and run it.
+--- Step 3 ----------------------------------------
+Simulate an attacker: copy a script onto the uploads volume and run
+it. It works, and that's the problem.
   $ sudo cp ~/linuxlab/scripts/hello.sh /mnt/data/
   $ /mnt/data/hello.sh
   You should see:
     Hello from the lab script!
 
---- Step 4: Remount with noexec and try again.
+--- Step 4 ----------------------------------------
+Apply the fix: remount with noexec and try running the script again.
   $ sudo mount -o remount,noexec /mnt/data
   $ /mnt/data/hello.sh
   $ findmnt /mnt/data
   You should see:
     Permission denied
     OPTIONS: rw,noexec,relatime
-  Why: The file is executable, but the mount blocks it. Common on /tmp for security.
+  Why:
+    The file is executable, but the mount blocks it. Common on /tmp for
+    security.
 
---- Step 5: Turn exec back on.
+--- Step 5 ----------------------------------------
+For this test only, turn exec back on so you can see the difference.
   $ sudo mount -o remount,exec /mnt/data
   $ /mnt/data/hello.sh
   You should see:
     Hello from the lab script!
 
---- Step 6: Make it read-only, try to write, then undo.
+--- Step 6 ----------------------------------------
+Maintenance mode: make the volume read-only, prove nothing can be
+written, then switch back.
   $ sudo mount -o remount,ro /mnt/data
   $ sudo touch /mnt/data/test.txt
   $ sudo mount -o remount,rw /mnt/data
   You should see:
     touch: cannot touch '/mnt/data/test.txt': Read-only file system
 
---- Step 7: See 'target is busy', then fix it.
+--- Step 7 ----------------------------------------
+Try to unmount while you're standing inside the folder. Then fix the
+"busy" error.
   $ cd /mnt/data
   $ sudo umount /mnt/data
   $ cd ~
@@ -53,36 +74,56 @@ GOAL: Use mount options to block programs, lock a filesystem read-only, and add 
     umount: /mnt/data: target is busy.
     ...then after cd ~ it works, and findmnt prints nothing.
 
---- Step 8: Back up fstab, then add an entry with noatime + nofail.
+--- Step 8 ----------------------------------------
+Make it mount at boot. Back up fstab first (Marcus never skips
+this), then add the entry.
   $ sudo cp /etc/fstab /etc/fstab.bak
   $ echo "/dev/vg_lab/lv_data /mnt/data ext4 defaults,noatime,nofail 0 2" | sudo tee -a /etc/fstab
   You should see:
     The line prints back.
-  Why: Real servers use UUID=... from blkid. The device path is fine for this lab.
+  Why:
+    Real servers use UUID=... from blkid. The device path is fine for
+    this lab.
 
---- Step 9: Test the fstab with mount -a.
+--- Step 9 ----------------------------------------
+Test the new fstab line now, before a reboot can find your mistake.
   $ sudo mount -a
   $ findmnt /mnt/data
   You should see:
     /mnt/data mounted again, OPTIONS include noatime
-  Why: No errors = safe to reboot. An error here = fix fstab NOW.
+  Why:
+    No errors = safe to reboot. An error here = fix fstab NOW.
 
---- Step 10: Restore the original fstab.
+--- Step 10 ----------------------------------------
+This is just a lab, so restore the original fstab.
   $ sudo cp /etc/fstab.bak /etc/fstab
   $ tail -3 /etc/fstab
   You should see:
     The vg_lab line is gone.
 
---- Step 11: Read-only practice: network mount syntax. Just read these.
+--- Step 11 ----------------------------------------
+Bonus reading: next month we'll connect to the office file server.
+Learn the two mount commands now.
     # NFS
   $ sudo mount -t nfs 192.168.1.50:/exports/files /mnt/nfs
     # SMB / CIFS
   $ sudo mount -t cifs //192.168.1.60/share /mnt/smb -o username=bob
   You should see:
     Nothing to run. There's no file server in your lab VM.
-  Why: Exam keywords: NFS = Linux shares (server:/path). SMB/CIFS/Samba = Windows shares (//server/share).
+  Why:
+    Exam keywords: NFS = Linux shares (server:/path). SMB/CIFS/Samba =
+    Windows shares (//server/share).
 
 STUCK?
-  * target is busy: Something (often your own terminal) is inside that folder. cd ~ and try again.
-  * mount -a shows an error: Restore right away: sudo cp /etc/fstab.bak /etc/fstab
-  * special device does not exist: Lesson 7 wasn't finished, or the VG is inactive. Try: sudo vgchange -a y vg_lab
+  * target is busy
+      Something (often your own terminal) is inside that folder. cd ~ and
+      try again.
+  * mount -a shows an error
+      Restore right away: sudo cp /etc/fstab.bak /etc/fstab
+  * special device does not exist
+      Lesson 7 wasn't finished, or the VG is inactive. Try: sudo vgchange
+      -a y vg_lab
+
+DONE? Ticket PP-108 closed.
+  Uploads can't run scripts, maintenance mode works, and the fstab is
+  safe.

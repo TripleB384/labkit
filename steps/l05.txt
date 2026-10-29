@@ -2,27 +2,43 @@ LESSON 5: Partitions   (Linux+ objective 1.3)
 ============================================================
 Setup needed first: sudo bash ~/labkit/u1-disks.sh
 
-GOAL: Partition a fake 300 MB disk with MBR, then switch it to GPT.
+TICKET PP-105
+From:    Marcus Bell, Senior Sysadmin (your mentor)
+Subject: Prep a new disk for the backup server
 
---- Step 1: Load your fake-disk names. Do this every time you open a new terminal.
+  A new disk just arrived for the backup server. It's DISK1 in the
+  lab, a safe fake disk. First, partition it the old-school MBR way so
+  you learn fdisk. Then wipe it and redo it with GPT, which is what we
+  use now. Whatever you do, do NOT touch the real system disk.
+
+--- Step 1 ----------------------------------------
+Load the names of the test disks. You'll do this every time you open
+a new terminal.
   $ source /tmp/disks.env
   $ echo $DISK1
   You should see:
     /dev/loop0 (or another loop number)
-  Why: If it prints nothing, run: sudo bash ~/labkit/u1-disks.sh
+  Why:
+    If it prints nothing, run: sudo bash ~/labkit/u1-disks.sh
 
---- Step 2: See all disks. Spot your real disk vs the fake loop disks.
+--- Step 2 ----------------------------------------
+Look at every disk on the server. Find the real system disk so you
+know which one to never touch.
   $ lsblk
   You should see:
     Your real disk (nvme0n1, xvda, sda or vda) plus loop0–loop4, each 300M. You may also see small snap loop devices; ignore those.
-  Why: Never run fdisk on the real disk. Always use $DISK1.
+  Why:
+    Never run fdisk on the real disk. Always use $DISK1.
 
---- Step 3: Check DISK1. It has no partitions yet.
+--- Step 3 ----------------------------------------
+Check the new disk (DISK1). It should be completely empty.
   $ sudo fdisk -l $DISK1
   You should see:
     Disk /dev/loopN: 300 MiB ... and no partition list.
 
---- Step 4: Create a 100M MBR partition. Type each key, then Enter.
+--- Step 4 ----------------------------------------
+Make a 100 MB MBR partition for the backup index. Type each key,
+then press Enter.
   $ sudo fdisk $DISK1
   $ o
   $ n
@@ -34,15 +50,20 @@ GOAL: Partition a fake 300 MB disk with MBR, then switch it to GPT.
   $ w
   You should see:
     'The partition table has been altered.'
-  Why: o = new MBR table, n = new, p = primary, 1 = number, Enter = default start, +100M = size, p = preview, w = save.
+  Why:
+    o = new MBR table, n = new, p = primary, 1 = number, Enter = default
+    start, +100M = size, p = preview, w = save.
 
---- Step 5: Check it.
+--- Step 5 ----------------------------------------
+Confirm the new partition shows up.
   $ lsblk $DISK1
   You should see:
     loopN with loopNp1 100M under it.
-  Why: No p1? Run: sudo partprobe $DISK1
+  Why:
+    No p1? Run: sudo partprobe $DISK1
 
---- Step 6: Add partition 2 using the rest of the disk.
+--- Step 6 ----------------------------------------
+Use the rest of the disk for a second partition.
   $ sudo fdisk $DISK1
   $ n
   $ p
@@ -53,18 +74,23 @@ GOAL: Partition a fake 300 MB disk with MBR, then switch it to GPT.
   You should see:
     loopNp2 about 199M
 
---- Step 7: Confirm the table type with parted.
+--- Step 7 ----------------------------------------
+Marcus asks which partition table type you used. Confirm it with
+parted.
   $ sudo parted $DISK1 print
   You should see:
     Partition Table: msdos  (msdos = MBR)
 
---- Step 8: Put a filesystem on p1 and read its UUID.
+--- Step 8 ----------------------------------------
+Format partition 1 and grab its UUID, the ID we'd put in fstab.
   $ sudo mkfs.ext4 -q ${DISK1}p1
   $ sudo blkid ${DISK1}p1
   You should see:
     UUID="..." BLOCK_SIZE="4096" TYPE="ext4"
 
---- Step 9: Wipe it and make a GPT table with parted in one line.
+--- Step 9 ----------------------------------------
+Plan change: the backup server needs GPT. Wipe the disk and redo it
+with parted in one line.
   $ sudo wipefs -a $DISK1
   $ sudo parted -s $DISK1 mklabel gpt mkpart data ext4 1MiB 150MiB
   $ sudo parted $DISK1 print
@@ -72,19 +98,30 @@ GOAL: Partition a fake 300 MB disk with MBR, then switch it to GPT.
     Partition Table: gpt
      1  1049kB  157MB  156MB  data
 
---- Step 10: Confirm with gdisk.
+--- Step 10 ----------------------------------------
+Double-check the GPT layout with gdisk.
   $ sudo gdisk -l $DISK1
   You should see:
     GPT: present
     1  2048  307199  149.0 MiB  8300  data
 
---- Step 11: See the kernel's view of partitions.
+--- Step 11 ----------------------------------------
+Finally, see what the kernel itself thinks the partitions are.
   $ cat /proc/partitions
   You should see:
     major minor #blocks name ... includes your loop partitions
 
 STUCK?
-  * $DISK1 is empty: Run: source /tmp/disks.env. If that file is missing, run: sudo bash ~/labkit/u1-disks.sh
-  * Typed a wrong key in fdisk: Press q and Enter. Nothing is saved until you press w.
-  * Partition not showing in lsblk: sudo partprobe $DISK1
-  * Device or resource busy: Something is mounted on it. Run sudo umount on it first.
+  * $DISK1 is empty
+      Run: source /tmp/disks.env. If that file is missing, run: sudo bash
+      ~/labkit/u1-disks.sh
+  * Typed a wrong key in fdisk
+      Press q and Enter. Nothing is saved until you press w.
+  * Partition not showing in lsblk
+      sudo partprobe $DISK1
+  * Device or resource busy
+      Something is mounted on it. Run sudo umount on it first.
+
+DONE? Ticket PP-105 closed.
+  Disk prepped, first as MBR and then as GPT. You know fdisk, parted
+  and gdisk now.

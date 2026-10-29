@@ -2,21 +2,37 @@ LESSON 1: Redirection & Pipes   (Linux+ objective 1.5)
 ============================================================
 Setup needed first: bash ~/labkit/u1.sh
 
-GOAL: Move output and errors around using fake company files.
+TICKET PP-101
+From:    Marcus Bell, Senior Sysadmin (your mentor)
+Subject: Welcome aboard — learn to move output around
 
---- Step 1: Go into the lab folder and list the files.
+  Welcome to Pool Pros! Before I hand you real tickets, I need you
+  comfortable steering command output. Half of this job is saving the
+  right output to the right file and hiding the noise. The server's
+  files are in ~/linuxlab. Work through this, and I'll show you the
+  trap that bit me in my first year.
+
+--- Step 1 ----------------------------------------
+First day on the server. Go to the company's lab folder and see
+what's in it.
   $ cd ~/linuxlab && ls
   You should see:
     access.log  app.log  config  customers.csv  reports  scripts  servers.txt
 
---- Step 2: Save the file list into listing.txt, then read it.
+--- Step 2 ----------------------------------------
+Dana wants a list of what's in that folder, saved to a file she can
+read later. Save the list to listing.txt.
   $ ls > listing.txt
   $ cat listing.txt
   You should see:
     Same list, but listing.txt is in it too.
-  Why: Why? The shell creates listing.txt BEFORE ls runs.
+  Why:
+    Why? The shell creates listing.txt BEFORE ls runs.
 
---- Step 3: Prove > overwrites and >> appends.
+--- Step 3 ----------------------------------------
+Marcus warns you: one arrow wipes a file, two arrows add to it.
+Prove it to yourself with a notes file before you ever touch a real
+log.
   $ echo "first" > notes2.txt
   $ echo "second" >> notes2.txt
   $ cat notes2.txt
@@ -28,51 +44,70 @@ GOAL: Move output and errors around using fake company files.
     ...then only:
     third
 
---- Step 4: Save ONLY the error from a bad command.
+--- Step 4 ----------------------------------------
+A script on this server keeps failing, and Marcus only wants the
+error messages, not the normal output. Capture just the error in
+errors.txt.
   $ ls nosuchfile 2> errors.txt
   $ cat errors.txt
   You should see:
     Nothing on screen at first. Then:
     ls: cannot access 'nosuchfile': No such file or directory
 
---- Step 5: Save normal output AND errors in one file.
+--- Step 5 ----------------------------------------
+Now Marcus wants everything, the good output AND the errors, in one
+file he can send to the vendor.
   $ ls customers.csv nosuchfile > both.txt 2>&1
   $ cat both.txt
   You should see:
     ls: cannot access 'nosuchfile': No such file or directory
     customers.csv
 
---- Step 6: See the exam trap: put 2>&1 BEFORE the >.
+--- Step 6 ----------------------------------------
+Marcus: "This is the mistake I made on my first job." Put 2>&1 in
+the wrong spot and see where the errors end up.
   $ ls customers.csv nosuchfile 2>&1 > trap.txt
   $ cat trap.txt
   You should see:
     The error prints on screen.
     trap.txt only has: customers.csv
-  Why: When 2>&1 ran, stdout still pointed at the screen. Order matters.
+  Why:
+    When 2>&1 ran, stdout still pointed at the screen. Order matters.
 
---- Step 7: Throw errors in the trash, then check the exit code.
+--- Step 7 ----------------------------------------
+A nightly job fills the screen with harmless errors. Send them to
+the trash, then check the exit code so you still know if it failed.
   $ ls nosuchfile 2> /dev/null
   $ echo $?
   You should see:
     2
-  Why: $? = exit code of the last command. 0 means success. Anything else means it failed.
+  Why:
+    $? = exit code of the last command. 0 means success. Anything else
+    means it failed.
 
---- Step 8: Pipe errors from the log into tee: screen AND file.
+--- Step 8 ----------------------------------------
+Dana asks: "How many errors did the app log today?" Show them on
+screen AND save a copy for her report, all in one go.
   $ grep ERROR app.log | tee errors-only.txt
   $ wc -l errors-only.txt
   You should see:
     3 ERROR lines on screen, then:
     3 errors-only.txt
 
---- Step 9: Feed a file in with < and compare to normal.
+--- Step 9 ----------------------------------------
+Count the customer records two ways. Notice what changes when you
+feed the file in with <.
   $ wc -l < customers.csv
   $ wc -l customers.csv
   You should see:
     13
     13 customers.csv
-  Why: With < the command never sees the file name, so it can't print it.
+  Why:
+    With < the command never sees the file name, so it can't print it.
 
---- Step 10: Write a file with a here-doc. Type EOF alone on the last line.
+--- Step 10 ----------------------------------------
+Start a to-do list for your first week by typing it straight into a
+file. Type EOF on its own line when you're done.
   $ cat << EOF > todo.txt
   $ check pumps
   $ call Ana
@@ -82,12 +117,23 @@ GOAL: Move output and errors around using fake company files.
     check pumps
     call Ana
 
---- Step 11: Use a here-string.
+--- Step 11 ----------------------------------------
+Quick one: a vendor wants a message in all caps. Convert it with a
+here-string.
   $ tr a-z A-Z <<< "hello linux"
   You should see:
     HELLO LINUX
 
 STUCK?
-  * No such file or directory on cd: Run the setup first: bash ~/labkit/u1.sh
-  * Stuck at a > prompt: The shell is waiting for your here-doc stop word. Type EOF alone on its own line (no spaces), or press Ctrl+C to cancel.
-  * Wrong output in a file: Run the step again. A single > overwrites, so you get a clean file each time.
+  * No such file or directory on cd
+      Run the setup first: bash ~/labkit/u1.sh
+  * Stuck at a > prompt
+      The shell is waiting for your here-doc stop word. Type EOF alone on
+      its own line (no spaces), or press Ctrl+C to cancel.
+  * Wrong output in a file
+      Run the step again. A single > overwrites, so you get a clean file
+      each time.
+
+DONE? Ticket PP-101 closed.
+  You can now steer output, errors and input wherever the job needs
+  them.

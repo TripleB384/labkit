@@ -2,16 +2,27 @@ LESSON 9: Filesystems & Inodes   (Linux+ objective 1.3)
 ============================================================
 Setup needed first: sudo bash ~/labkit/u1-disks.sh
 
-GOAL: Break a filesystem by running out of inodes, compare link types, and grow an XFS filesystem.
+TICKET PP-109
+From:    Jordan Kim, Web Developer
+Subject: URGENT: "No space left" but the disk is empty?!
 
---- Step 1: Compare space and inodes on your main disk.
+  The thumbnail server says "No space left on device," but df shows
+  the disk is barely used. I'm losing my mind. Can you figure out
+  what's going on? Also, while you're in there, the reports server
+  needs more room and it runs XFS.
+
+--- Step 1 ----------------------------------------
+Start your investigation. Compare free space AND free inodes on the
+main disk.
   $ df -h /
   $ df -i /
   $ du -sh ~/linuxlab
   You should see:
     Size/Used/Avail, then Inodes/IUsed/IFree, then the folder size (a few KB).
 
---- Step 2: Build a tiny filesystem with only 64 inodes.
+--- Step 2 ----------------------------------------
+Rebuild Jordan's problem: a small filesystem with very few inodes,
+like his thumbnail server.
   $ sudo truncate -s 20M /root/disklab/tiny.img
   $ sudo mkfs.ext4 -q -F -N 64 /root/disklab/tiny.img
   $ sudo mkdir -p /mnt/tiny
@@ -19,29 +30,39 @@ GOAL: Break a filesystem by running out of inodes, compare link types, and grow 
   You should see:
     No output = success.
 
---- Step 3: Fill it with empty files until it breaks.
+--- Step 3 ----------------------------------------
+Fill it with tiny files the way the thumbnail generator does, until
+it breaks.
   $ for i in $(seq 1 100); do sudo touch /mnt/tiny/f$i || break; done
   You should see:
     touch: cannot touch '/mnt/tiny/f54': No space left on device
-  Why: The exact number may differ slightly.
+  Why:
+    The exact number may differ slightly.
 
---- Step 4: The mystery: lots of space, no room.
+--- Step 4 ----------------------------------------
+The mystery: why does it say full when there's space? Check both
+numbers.
   $ df -h /mnt/tiny
   $ df -i /mnt/tiny
   You should see:
     df -h: Use% 1%
     df -i: IUse% 100%
-  Why: This is inode exhaustion. Exam answer: check df -i.
+  Why:
+    This is inode exhaustion. Exam answer: check df -i.
 
---- Step 5: Check the tiny filesystem. It must be unmounted first.
+--- Step 5 ----------------------------------------
+Run a filesystem check on it. Remember to unmount first.
   $ sudo umount /mnt/tiny
   $ sudo e2fsck -fn /root/disklab/tiny.img
   You should see:
     Pass 1 ... Pass 5, then:
     tiny.img: 64/64 files ...
-  Why: -f = force a full check, -n = only look, change nothing.
+  Why:
+    -f = force a full check, -n = only look, change nothing.
 
---- Step 6: Make a hard link and a symlink.
+--- Step 6 ----------------------------------------
+Jordan asks about the links he saw in the customers folder. Make a
+hard link and a symlink to compare them.
   $ cd ~/linuxlab
   $ ln customers.csv cust-hard.csv
   $ ln -s customers.csv cust-soft.csv
@@ -50,21 +71,26 @@ GOAL: Break a filesystem by running out of inodes, compare link types, and grow 
     customers.csv and cust-hard.csv share the SAME inode number, link count 2.
     cust-soft.csv -> customers.csv has its own inode.
 
---- Step 7: Delete the original and see what survives.
+--- Step 7 ----------------------------------------
+Delete the original file. Which link still works?
   $ rm customers.csv
   $ head -2 cust-hard.csv
   $ cat cust-soft.csv
   You should see:
     Hard link still shows the data.
     cat: cust-soft.csv: No such file or directory
-  Why: Get customers.csv back later with: bash ~/labkit/u1.sh
+  Why:
+    Get customers.csv back later with: bash ~/labkit/u1.sh
 
---- Step 8: Check the inode details.
+--- Step 8 ----------------------------------------
+Look at the inode details to see why the hard link survived.
   $ stat cust-hard.csv
   You should see:
     Inode: <number>   Links: 1  (it was 2 before the delete)
 
---- Step 9: Make an XFS filesystem on DISK1 and mount it.
+--- Step 9 ----------------------------------------
+Next item: set up the reports server's XFS filesystem on DISK1 and
+mount it.
   $ source /tmp/disks.env
   $ sudo wipefs -a $DISK1
   $ sudo mkfs.xfs -f $DISK1
@@ -73,9 +99,12 @@ GOAL: Break a filesystem by running out of inodes, compare link types, and grow 
   $ df -hT /mnt/xfsdata
   You should see:
     Type: xfs, Size about 236M
-  Why: XFS needs at least 300 MB, which is why it gets a whole fake disk.
+  Why:
+    XFS needs at least 300 MB, which is why it gets a whole fake disk.
 
---- Step 10: 'Add' 100 MB to the fake disk, then grow XFS live.
+--- Step 10 ----------------------------------------
+Reports need more room. The "disk" just got bigger, so grow XFS
+while it stays mounted.
   $ sudo truncate -s 400M /root/disklab/disk1.img
   $ sudo losetup -c $DISK1
   $ sudo xfs_growfs /mnt/xfsdata
@@ -83,14 +112,19 @@ GOAL: Break a filesystem by running out of inodes, compare link types, and grow 
   You should see:
     data blocks changed from 76800 to 102400
     Size now about 336M
-  Why: xfs_growfs takes the MOUNT POINT. There's no command to shrink XFS.
+  Why:
+    xfs_growfs takes the MOUNT POINT. There's no command to shrink XFS.
 
---- Step 11: Read ext4 settings with tune2fs (on lv_data from Lesson 7).
+--- Step 11 ----------------------------------------
+Marcus wants the ext4 settings on the uploads volume from ticket
+PP-107.
   $ sudo tune2fs -l /dev/vg_lab/lv_data | grep -E "Inode count|Block size|features"
   You should see:
     Filesystem features: has_journal ... Inode count ... Block size: 4096
 
---- Step 12: Mount a RAM filesystem.
+--- Step 12 ----------------------------------------
+Jordan wants a super-fast scratch area for temp files. Mount one in
+RAM.
   $ sudo mkdir -p /mnt/ram
   $ sudo mount -t tmpfs -o size=50M tmpfs /mnt/ram
   $ df -hT /mnt/ram
@@ -98,7 +132,8 @@ GOAL: Break a filesystem by running out of inodes, compare link types, and grow 
   You should see:
     tmpfs  tmpfs  50M  0  50M  0%  /mnt/ram
 
---- Step 13: Clean up everything and reset your files.
+--- Step 13 ----------------------------------------
+All done. Clean up the storage lab and reset your files.
   $ cd ~
   $ sudo bash ~/labkit/u1-clean.sh
   $ bash ~/labkit/u1.sh
@@ -107,7 +142,16 @@ GOAL: Break a filesystem by running out of inodes, compare link types, and grow 
     Lab ready in /home/<you>/linuxlab
 
 STUCK?
-  * mkfs.xfs: appears to contain an existing filesystem: Add -f to force it.
-  * mkfs.xfs: Filesystem must be larger than 300MB: Use a whole 300 MB fake disk ($DISK1), not a smaller partition or LV.
-  * /dev/vg_lab/lv_data not found: Lesson 7 is needed for that step. Skip it or do Lesson 7 first.
-  * e2fsck says the filesystem is mounted: Unmount it first: sudo umount /mnt/tiny
+  * mkfs.xfs: appears to contain an existing filesystem
+      Add -f to force it.
+  * mkfs.xfs: Filesystem must be larger than 300MB
+      Use a whole 300 MB fake disk ($DISK1), not a smaller partition or
+      LV.
+  * /dev/vg_lab/lv_data not found
+      Lesson 7 is needed for that step. Skip it or do Lesson 7 first.
+  * e2fsck says the filesystem is mounted
+      Unmount it first: sudo umount /mnt/tiny
+
+DONE? Ticket PP-109 closed.
+  Mystery solved (inode exhaustion), links explained, and the reports
+  server grew live.

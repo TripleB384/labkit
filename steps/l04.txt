@@ -2,88 +2,130 @@ LESSON 4: Devices, Modules & initrd   (Linux+ objective 1.2)
 ============================================================
 Setup needed first: bash ~/labkit/u1.sh
 
-GOAL: Inspect the hardware and drivers of a real Linux machine. Everything here only reads, except the module load/unload.
+TICKET PP-104
+From:    Marcus Bell, Senior Sysadmin (your mentor)
+Subject: Hardware inventory for the insurance audit
 
---- Step 1: List loaded modules and count them.
+  Insurance is auditing our servers and wants a hardware and driver
+  inventory. Look at what's actually in this box: CPU, memory, PCI
+  devices, BIOS info, loaded drivers, and the boot files. It's almost
+  all read-only, so you can't break anything. I'll also show you how
+  to load and unload a driver safely.
+
+--- Step 1 ----------------------------------------
+Start the inventory with the drivers (kernel modules) currently
+loaded. How many are there?
   $ lsmod | head
   $ lsmod | wc -l
   You should see:
     Columns: Module  Size  Used by
     Then a number (often 50–150).
 
---- Step 2: Get details on the first module in the list.
+--- Step 2 ----------------------------------------
+Pick the first driver in the list and pull its details for the
+report.
   $ modinfo $(lsmod | awk 'NR==2{print $1}') | head
   You should see:
     filename:, description:, license:, depends: ...
 
---- Step 3: Load a module with modprobe, check it, remove it.
+--- Step 3 ----------------------------------------
+Marcus shows you how to load a driver and remove it again. Practice
+with the harmless "dummy" module.
   $ sudo modprobe dummy
   $ lsmod | grep dummy
   $ sudo modprobe -r dummy
   $ lsmod | grep dummy
   You should see:
     dummy shows up, then the last command prints nothing.
-  Why: If you get 'Module dummy not found', this machine doesn't ship it. Skip this step.
+  Why:
+    If you get 'Module dummy not found', this machine doesn't ship it.
+    Skip this step.
 
---- Step 4: Do a dry run: what WOULD modprobe load?
+--- Step 4 ----------------------------------------
+Before loading anything on a production box, do a dry run to see
+what modprobe WOULD do.
   $ modprobe -n -v dummy
   You should see:
     insmod /lib/modules/.../dummy.ko (or nothing if already built in)
 
---- Step 5: CPU info two ways.
+--- Step 5 ----------------------------------------
+The auditor wants CPU details. Get them two ways.
   $ lscpu | head -15
   $ grep -c processor /proc/cpuinfo
   You should see:
     Architecture: x86_64, CPU(s): N ...
     Then the CPU count.
 
---- Step 6: Memory info.
+--- Step 6 ----------------------------------------
+Next on the list: how much memory does this server have?
   $ free -h
   $ lsmem | tail -3
   You should see:
     Total/used/free RAM, then 'Total online memory'.
 
---- Step 7: PCI devices and their drivers.
+--- Step 7 ----------------------------------------
+List the PCI hardware and which driver each device uses.
   $ lspci
   $ lspci -k | head -20
   You should see:
     Bridges, storage, and network controllers. 'Kernel driver in use:' lines.
-  Why: In a VM you'll see virtual hardware. On an AWS cloud VM: Amazon Elastic Network Adapter and NVMe controllers. Others show Virtio or QEMU.
+  Why:
+    In a VM you'll see virtual hardware. On an AWS cloud VM: Amazon
+    Elastic Network Adapter and NVMe controllers. Others show Virtio or
+    QEMU.
 
---- Step 8: USB devices.
+--- Step 8 ----------------------------------------
+Any USB devices plugged in? (On a cloud VM there may be none, and
+that's fine.)
   $ lsusb
   You should see:
     A list, or nothing at all in many VMs. Both are fine.
 
---- Step 9: BIOS/DMI info (needs root).
+--- Step 9 ----------------------------------------
+The auditor wants the maker, model and serial number from the BIOS.
   $ sudo dmidecode -t system | head -15
   You should see:
     Manufacturer, Product Name, Serial Number (an AWS VM shows Amazon EC2; others show QEMU).
 
---- Step 10: Full hardware summary.
+--- Step 10 ----------------------------------------
+Generate a one-page hardware summary for the report.
   $ sudo lshw -short | head -20
   You should see:
     A table: H/W path, Device, Class, Description
 
---- Step 11: Read kernel messages, then search for errors.
+--- Step 11 ----------------------------------------
+Check the kernel's own log for hardware errors.
   $ sudo dmesg | tail -20
   $ sudo dmesg | grep -i error
   You should see:
     Recent kernel lines with [timestamps]. The error search may be empty.
 
---- Step 12: Find the kernel and initrd files in /boot.
+--- Step 12 ----------------------------------------
+Note which kernel the server boots, and find its matching initrd
+file in /boot.
   $ uname -r
   $ ls -lh /boot
   You should see:
     vmlinuz-<version> (kernel) and initrd.img-<version> (initrd) match uname -r.
 
---- Step 13: Peek inside the initrd.
+--- Step 13 ----------------------------------------
+Last item: list what drivers are packed inside the initrd that loads
+at boot.
   $ lsinitramfs /boot/initrd.img-$(uname -r) | head
   You should see:
     A list of files and drivers packed into the initrd.
-  Why: Ubuntu tool. On RHEL: lsinitrd. To rebuild on RHEL: dracut -f
+  Why:
+    Ubuntu tool. On RHEL: lsinitrd. To rebuild on RHEL: dracut -f
 
 STUCK?
-  * command not found (lspci, lsusb, lshw, dmidecode): Install them: sudo apt install -y pciutils usbutils lshw dmidecode kmod
-  * Operation not permitted / Permission denied: Put sudo in front.
-  * lsinitramfs: no such file: Run ls /boot and use the initrd file name you see.
+  * command not found (lspci, lsusb, lshw, dmidecode)
+      Install them: sudo apt install -y pciutils usbutils lshw dmidecode
+      kmod
+  * Operation not permitted / Permission denied
+      Put sudo in front.
+  * lsinitramfs: no such file
+      Run ls /boot and use the initrd file name you see.
+
+DONE? Ticket PP-104 closed.
+  Inventory done. The auditor has CPU, memory, devices, BIOS info,
+  drivers and boot files.

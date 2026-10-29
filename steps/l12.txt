@@ -2,9 +2,18 @@ LESSON 12: Processes & Jobs   (Linux+ objective 2.3)
 ============================================================
 Setup needed first: bash ~/labkit/u2.sh
 
-GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them, and schedule a job.
+TICKET PP-112
+From:    Marcus Bell, Senior Sysadmin (your mentor)
+Subject: Something is eating the CPU
 
---- Step 1: Start the fake app in the background.
+  Customers say the site is slow. My guess is a runaway process. Our
+  app (poolapp) should be running, but something else might be hogging
+  the CPU. Find them, figure out who started what, slow down or stop
+  the bad one, and set up the nightly report to run on a schedule.
+
+--- Step 1 ----------------------------------------
+Start the company app in the background so it's running like in
+production.
   $ cd ~/linuxlab2
   $ ./scripts/poolapp.sh &
   $ jobs
@@ -12,25 +21,31 @@ GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them,
   You should see:
     [1]+  Running   ./scripts/poolapp.sh &
     Then its PID.
-  Why: $! = PID of the last background job.
+  Why:
+    $! = PID of the last background job.
 
---- Step 2: Find it three ways.
+--- Step 2 ----------------------------------------
+Find the app's process three different ways.
   $ pgrep -a poolapp
   $ ps aux | grep [p]oolapp
   $ ps -o pid,ppid,stat,ni,comm -p $(pgrep poolapp)
   You should see:
     PID  PPID STAT NI COMMAND
     1234 1200 S     0 poolapp.sh
-  Why: [p] keeps grep from matching itself. S = sleeping: it waits 5 seconds between writes.
+  Why:
+    [p] keeps grep from matching itself. S = sleeping: it waits 5
+    seconds between writes.
 
---- Step 3: See the family tree. Your shell is its parent.
+--- Step 3 ----------------------------------------
+Who launched the app? Look at the process family tree.
   $ pstree -p $$ | head -5
   $ echo $$
   You should see:
     bash(1200)─┬─poolapp.sh(1234)───sleep(...)
     $$ = your shell's PID, the same as the PPID above.
 
---- Step 4: Read its live info in /proc.
+--- Step 4 ----------------------------------------
+Read the app's live details straight from /proc.
   $ grep -E "Name|State|PPid" /proc/$(pgrep poolapp)/status
   $ ls -l /proc/$(pgrep poolapp)/cwd
   You should see:
@@ -39,16 +54,21 @@ GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them,
     PPid: 1200
     cwd -> /home/<you>/linuxlab2
 
---- Step 5: Start the CPU hog with a nice value of 10.
+--- Step 5 ----------------------------------------
+Here's the culprit: a CPU hog someone left running. Start it with a
+lower priority to simulate it.
   $ nice -n 10 ./scripts/cpuhog.sh &
   $ sleep 2
   $ ps -o pid,ni,pcpu,stat,comm -p $(pgrep cpuhog)
   You should see:
     PID   NI %CPU STAT COMMAND
     1300  10 99.0 RN   cpuhog.sh
-  Why: R = running, N = low priority (nice).
+  Why:
+    R = running, N = low priority (nice).
 
---- Step 6: renice it. Then try to make it MORE important without sudo.
+--- Step 6 ----------------------------------------
+Lower its priority even more. Then try to raise it again without
+sudo, and see why you can't.
   $ renice -n 15 -p $(pgrep cpuhog)
   $ renice -n 5 -p $(pgrep cpuhog)
   $ sudo renice -n -5 -p $(pgrep cpuhog)
@@ -56,28 +76,36 @@ GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them,
     old priority 10, new priority 15
     renice: failed to set priority ...: Permission denied
     old priority 15, new priority -5
-  Why: Normal users can only make a process nicer (higher number). Lowering needs root.
+  Why:
+    Normal users can only make a process nicer (higher number). Lowering
+    needs root.
 
---- Step 7: Watch it in top. Press P to sort by CPU, q to quit.
+--- Step 7 ----------------------------------------
+Watch it eat CPU live in top.
   $ top
   You should see:
     cpuhog.sh near the top, about 100% CPU, NI = -5.
 
---- Step 8: Pause it with a signal, check the state, resume.
+--- Step 8 ----------------------------------------
+Pause the hog without killing it, check its state, then let it
+continue.
   $ kill -STOP $(pgrep cpuhog)
   $ ps -o pid,stat,comm -p $(pgrep cpuhog)
   $ kill -CONT $(pgrep cpuhog)
   You should see:
     STAT T  (T = stopped)
 
---- Step 9: Kill it nicely (SIGTERM, the default).
+--- Step 9 ----------------------------------------
+Ask it nicely to stop (the default signal).
   $ kill $(pgrep cpuhog)
   $ sleep 1
   $ pgrep cpuhog || echo "cpuhog gone"
   You should see:
     cpuhog gone
 
---- Step 10: Job control with Ctrl+Z, bg and fg.
+--- Step 10 ----------------------------------------
+Marcus shows you how to pause a job, send it to the background, and
+bring it back.
   $ ./scripts/cpuhog.sh
     (press Ctrl+Z)
   $ jobs
@@ -90,14 +118,17 @@ GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them,
     ...after bg: Running
     fg brings it back. Ctrl+C ends it.
 
---- Step 11: nohup + pkill, and see the signal list.
+--- Step 11 ----------------------------------------
+Someone ran a job with nohup so it survives logout. Stop it by name,
+and look at the signal list.
   $ nohup ./scripts/cpuhog.sh > /dev/null 2>&1 &
   $ pkill cpuhog
   $ kill -l | head -2
   You should see:
      1) SIGHUP  2) SIGINT ... 9) SIGKILL ... 15) SIGTERM
 
---- Step 12: Force-kill the fake app with signal 9.
+--- Step 12 ----------------------------------------
+The app froze and won't respond. Force-kill it.
   $ kill -9 $(pgrep poolapp)
   $ jobs
   $ wc -l poolapp.log
@@ -105,7 +136,9 @@ GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them,
     Killed  ./scripts/poolapp.sh
     Then how many heartbeat lines it wrote.
 
---- Step 13: Check limits, load and CPU stats.
+--- Step 13 ----------------------------------------
+Check the server's limits, load average and CPU stats for your
+incident report.
   $ ulimit -u
   $ ulimit -n
   $ uptime
@@ -116,18 +149,23 @@ GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them,
     load average: x, y, z (1, 5, 15 minutes)
     mpstat: %usr %sys %idle ...
 
---- Step 14: Spy on system calls with strace.
+--- Step 14 ----------------------------------------
+Marcus shows you how to see exactly what a program is asking the
+kernel to do.
   $ strace -c ls > /dev/null
   You should see:
     A table: % time, calls, syscall (read, openat, write ...)
 
---- Step 15: Schedule a job every minute with cron.
+--- Step 15 ----------------------------------------
+Rosa wants the report script to run automatically. Schedule it every
+minute for testing.
   $ (crontab -l 2>/dev/null; echo "* * * * * $HOME/linuxlab2/scripts/report.sh") | crontab -
   $ crontab -l
   You should see:
     * * * * * /home/<you>/linuxlab2/scripts/report.sh
 
---- Step 16: Wait 2 minutes, check, then remove it.
+--- Step 16 ----------------------------------------
+Wait two minutes, confirm it ran, then remove the test schedule.
   $ cat ~/linuxlab2/report.log
   $ crontab -r
   $ crontab -l
@@ -135,7 +173,8 @@ GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them,
     2026-.. nightly report ran (one line per minute)
     no crontab for <you>
 
---- Step 17: Run a one-time job with at.
+--- Step 17 ----------------------------------------
+Run the report once, one minute from now, without cron.
   $ sudo apt install -y at
   $ echo "$HOME/linuxlab2/scripts/report.sh" | at now + 1 minute
   $ atq
@@ -143,16 +182,26 @@ GOAL: Start a fake app and a CPU hog, then find, slow down, pause and kill them,
     job 1 at ...
     1  <date>  a  <you>
 
---- Step 18: Look at the system schedules.
+--- Step 18 ----------------------------------------
+Look at the schedules that already run on this server.
   $ ls /etc/cron.d /etc/cron.daily
   $ cat /etc/anacrontab
   You should see:
     Daily jobs like logrotate.
     anacrontab lines: period delay job-id command.
-  Why: No /etc/anacrontab? sudo apt install -y anacron
+  Why:
+    No /etc/anacrontab? sudo apt install -y anacron
 
 STUCK?
-  * pgrep finds nothing: The process already ended. Start it again.
-  * $(pgrep cpuhog) gives 2 PIDs: Two copies are running. Run pkill cpuhog and start one again.
-  * Terminal stuck / CPU fan loud: Press Ctrl+C. Or open a new terminal and run pkill cpuhog.
-  * at: command not found: sudo apt install -y at
+  * pgrep finds nothing
+      The process already ended. Start it again.
+  * $(pgrep cpuhog) gives 2 PIDs
+      Two copies are running. Run pkill cpuhog and start one again.
+  * Terminal stuck / CPU fan loud
+      Press Ctrl+C. Or open a new terminal and run pkill cpuhog.
+  * at: command not found
+      sudo apt install -y at
+
+DONE? Ticket PP-112 closed.
+  CPU hog found and handled, app status understood, and the report
+  runs on a schedule.

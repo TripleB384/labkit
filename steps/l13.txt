@@ -2,14 +2,24 @@ LESSON 13: Software & Packages   (Linux+ objective 2.4)
 ============================================================
 Setup needed first: bash ~/labkit/u2.sh
 
-GOAL: Inspect, install, pin and remove packages, then stand up a real web server with your own page.
+TICKET PP-113
+From:    Jordan Kim, Web Developer
+Subject: Need a web server for the new landing page
 
---- Step 1: Refresh the package list.
+  I need a web server on this box for our new landing page. Marcus
+  also wants you to learn how we install, pin and remove software
+  properly. And keep the server clean, so nothing is left lying
+  around.
+
+--- Step 1 ----------------------------------------
+Refresh the server's list of available software first.
   $ sudo apt update
   You should see:
     Hit / Get lines ... Reading package lists... Done
 
---- Step 2: Check a package before installing it.
+--- Step 2 ----------------------------------------
+Jordan wants a fun tool for the team chat. Check it out before
+installing anything.
   $ apt-cache policy cowsay
   $ apt show cowsay 2>/dev/null | grep -E "^(Package|Version|Depends)"
   You should see:
@@ -17,13 +27,16 @@ GOAL: Inspect, install, pin and remove packages, then stand up a real web server
     Candidate: 3.x
     Depends: libtext-charwidth-perl, perl:any
 
---- Step 3: Install it and use it.
+--- Step 3 ----------------------------------------
+Install it and try it.
   $ sudo apt install -y cowsay
   $ /usr/games/cowsay "Pool Pros"
   You should see:
     A cow saying Pool Pros.
 
---- Step 4: Ask dpkg about it.
+--- Step 4 ----------------------------------------
+Marcus asks: what did that package install, and which package owns
+the ls command?
   $ dpkg -l cowsay
   $ dpkg -L cowsay | head -5
   $ dpkg -S /usr/bin/ls
@@ -32,7 +45,8 @@ GOAL: Inspect, install, pin and remove packages, then stand up a real web server
     The files it installed
     coreutils: /usr/bin/ls
 
---- Step 5: Pin it so upgrades skip it, then release.
+--- Step 5 ----------------------------------------
+Freeze it so upgrades skip it, then unfreeze it.
   $ sudo apt-mark hold cowsay
   $ apt-mark showhold
   $ sudo apt-mark unhold cowsay
@@ -41,7 +55,9 @@ GOAL: Inspect, install, pin and remove packages, then stand up a real web server
     cowsay
     Canceled hold on cowsay.
 
---- Step 6: Find where repos and keys are set.
+--- Step 6 ----------------------------------------
+Find where this server gets its software, and which security keys it
+trusts.
   $ ls /etc/apt/sources.list /etc/apt/sources.list.d/
   $ ls /etc/apt/keyrings /usr/share/keyrings 2>/dev/null
   $ grep -rh "^deb \|^URIs" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null | head -3
@@ -49,36 +65,46 @@ GOAL: Inspect, install, pin and remove packages, then stand up a real web server
     The repo list files
     Key files (.gpg / .asc)
     deb http://... ubuntu ... main restricted  (or URIs: ... on 24.04)
-  Why: Ubuntu 22.04 keeps the main list in /etc/apt/sources.list. 24.04 uses /etc/apt/sources.list.d/ubuntu.sources.
+  Why:
+    Ubuntu 22.04 keeps the main list in /etc/apt/sources.list. 24.04
+    uses /etc/apt/sources.list.d/ubuntu.sources.
 
---- Step 7: Switch the default editor with update-alternatives.
+--- Step 7 ----------------------------------------
+Jordan prefers vim. Switch the server's default editor.
   $ update-alternatives --list editor
   $ sudo update-alternatives --config editor
   You should see:
     A numbered menu: nano, vim.basic ... Type a number and press Enter.
 
---- Step 8: Install a real web server.
+--- Step 8 ----------------------------------------
+Now Jordan's real request: install the nginx web server.
   $ sudo apt install -y nginx
   $ curl -s localhost | grep title
   You should see:
     <title>Welcome to nginx!</title>
 
---- Step 9: Configure it: replace the home page.
+--- Step 9 ----------------------------------------
+Put Jordan's landing page live.
   $ ls /etc/nginx/sites-enabled
   $ echo "<h1>Pool Pros on nginx</h1>" | sudo tee /var/www/html/index.html
   $ curl -s localhost
   You should see:
     default
     <h1>Pool Pros on nginx</h1>
-  Why: Config lives in /etc/nginx. Web files live in /var/www/html.
+  Why:
+    Config lives in /etc/nginx. Web files live in /var/www/html.
 
---- Step 10: Check its config syntax (do this before every reload).
+--- Step 10 ----------------------------------------
+Before any config reload, Marcus always tests the config. Do the
+same.
   $ sudo nginx -t
   You should see:
     syntax is ok
     test is successful
 
---- Step 11: Remove vs purge.
+--- Step 11 ----------------------------------------
+Learn the difference between remove and purge (it matters for
+leftover configs).
   $ sudo apt remove -y nginx nginx-common
   $ dpkg -l | grep nginx
   $ ls /etc/nginx
@@ -89,7 +115,9 @@ GOAL: Inspect, install, pin and remove packages, then stand up a real web server
     The config folder is still there.
     After purge: ls: cannot access '/etc/nginx'
 
---- Step 12: Clean up and look at sandboxed + language tools.
+--- Step 12 ----------------------------------------
+Clean up the test tools, and check the sandboxed and Python package
+tools.
   $ sudo apt purge -y cowsay
   $ sudo apt autoremove -y
   $ snap list
@@ -97,7 +125,9 @@ GOAL: Inspect, install, pin and remove packages, then stand up a real web server
   You should see:
     snap list shows snap apps (or 'command not found' on minimal installs). pip shows its version.
 
---- Step 13: Read-only: the RHEL and SUSE versions. Just read these.
+--- Step 13 ----------------------------------------
+Bonus reading: the same jobs on Red Hat and SUSE servers, which
+other clients use.
     # RHEL / Rocky / Fedora
   $ sudo dnf install httpd
   $ rpm -qf /usr/sbin/httpd
@@ -107,10 +137,20 @@ GOAL: Inspect, install, pin and remove packages, then stand up a real web server
   $ sudo zypper addlock kernel-default
   You should see:
     Nothing to run on Ubuntu.
-  Why: Exam loves these: dnf = RHEL, zypper = SUSE, apt = Debian.
+  Why:
+    Exam loves these: dnf = RHEL, zypper = SUSE, apt = Debian.
 
 STUCK?
-  * Could not get lock /var/lib/dpkg/lock: Another install is running (often auto-updates). Wait a minute and try again.
-  * Unable to locate package: Run sudo apt update first.
-  * curl: Failed to connect to localhost: nginx isn't running. sudo systemctl start nginx
-  * Address already in use (port 80): Something else uses port 80. Check: sudo lsof -i :80
+  * Could not get lock /var/lib/dpkg/lock
+      Another install is running (often auto-updates). Wait a minute and
+      try again.
+  * Unable to locate package
+      Run sudo apt update first.
+  * curl: Failed to connect to localhost
+      nginx isn't running. sudo systemctl start nginx
+  * Address already in use (port 80)
+      Something else uses port 80. Check: sudo lsof -i :80
+
+DONE? Ticket PP-113 closed.
+  Landing page went live, packages were managed properly, and the
+  server is clean.

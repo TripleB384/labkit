@@ -2,9 +2,19 @@ LESSON 2: Text Tools & Regex   (Linux+ objective 1.5)
 ============================================================
 Setup needed first: bash ~/labkit/u1.sh
 
-GOAL: Dig through a fake app log and customer list like a real admin.
+TICKET PP-102
+From:    Dana Okafor, Operations Manager
+Subject: Monday report: what went wrong, and who are our customers?
 
---- Step 1: Find every ERROR with its line number.
+  Hey! The owner wants a quick health report on the web app before
+  Monday's meeting. I need error and warning counts, the real settings
+  in our config (not the comments), a revenue total, which cities our
+  customers are in, and whether anyone is hammering our login page.
+  The files are in ~/linuxlab. Thanks!
+
+--- Step 1 ----------------------------------------
+Start with the app log. Dana wants every ERROR, with line numbers so
+the developer can find them fast.
   $ cd ~/linuxlab
   $ grep -n ERROR app.log
   You should see:
@@ -12,28 +22,37 @@ GOAL: Dig through a fake app log and customer list like a real admin.
     9:...ERROR api: POST /invoice 500
     12:...ERROR disk: /var is 97% full
 
---- Step 2: Count the warnings.
+--- Step 2 ----------------------------------------
+How many warnings did the app throw? Dana just needs the number.
   $ grep -c WARN app.log
   You should see:
     3
 
---- Step 3: Search without caring about upper/lower case.
+--- Step 3 ----------------------------------------
+The developer swears the database disconnected, but they don't
+remember the capitalization. Search without caring about case.
   $ grep -i "DATABASE" app.log
   You should see:
     2 lines with 'connected to database'
 
---- Step 4: Show everything that is NOT INFO, and count it.
+--- Step 4 ----------------------------------------
+Dana says: "Skip the normal stuff." Show only the lines that aren't
+INFO, then count them.
   $ grep -v INFO app.log
   $ grep -v INFO app.log | wc -l
   You should see:
     The WARN and ERROR lines, then: 6
 
---- Step 5: Use regex: lines that END with 'full'.
+--- Step 5 ----------------------------------------
+The disk warnings all end with the word "full". Pull just those
+lines to show the disk is filling up.
   $ grep 'full$' app.log
   You should see:
     3 disk lines (81%, 88%, 97%)
 
---- Step 6: Admin classic: show only real settings (no comments, no blank lines).
+--- Step 6 ----------------------------------------
+Marcus asks what the app is actually set to. Show only the real
+settings, with no comment lines and no blank lines.
   $ grep -v '^#' config/app.conf | grep -v '^$'
   You should see:
     port=8080
@@ -43,7 +62,9 @@ GOAL: Dig through a fake app log and customer list like a real admin.
     debug=true
     smtp_server=mail.example.com
 
---- Step 7: Cut out the name and city columns.
+--- Step 7 ----------------------------------------
+Finance wants names and cities only, not plans or prices. Cut out
+just those two columns.
   $ cut -d, -f2,3 customers.csv | head -4
   You should see:
     name,city
@@ -51,7 +72,9 @@ GOAL: Dig through a fake app log and customer list like a real admin.
     Ben Carter,Riverside
     Carla Diaz,Springfield
 
---- Step 8: Use awk: customers paying more than $100 (skip the header row).
+--- Step 8 ----------------------------------------
+The owner asks: "Who are our big spenders?" List everyone paying
+more than $100 a month.
   $ awk -F, 'NR>1 && $5 > 100 {print $2, $5}' customers.csv
   You should see:
     Ana Reyes 149
@@ -59,20 +82,27 @@ GOAL: Dig through a fake app log and customer list like a real admin.
     Iris Chen 149
     Kim Nguyen 149
 
---- Step 9: Use awk to add up monthly revenue.
+--- Step 9 ----------------------------------------
+Next question for the report: what's our total monthly revenue from
+these customers?
   $ awk -F, 'NR>1 {sum+=$5} END {print sum}' customers.csv
   You should see:
     1228
 
---- Step 10: Replace text with sed. Then prove the file did NOT change.
+--- Step 10 ----------------------------------------
+Sales is thinking of renaming the Basic plan to Starter. Preview the
+change without actually editing the customer file.
   $ sed 's/Basic/Starter/' customers.csv | head -3
   $ grep -c Basic customers.csv
   You should see:
     Ben Carter shows 'Starter'
     Then: 4  (file still says Basic)
-  Why: sed only prints the change. Add -i to actually edit the file.
+  Why:
+    sed only prints the change. Add -i to actually edit the file.
 
---- Step 11: See why uniq needs sort.
+--- Step 11 ----------------------------------------
+Marcus hands you a messy server list with duplicates and asks for a
+clean count. Find out why uniq alone doesn't work.
   $ uniq servers.txt
   $ sort servers.txt | uniq -c
   You should see:
@@ -83,7 +113,9 @@ GOAL: Dig through a fake app log and customer list like a real admin.
       1 web01
       3 web02
 
---- Step 12: Count customers per city, biggest first.
+--- Step 12 ----------------------------------------
+Dana wants customers per city, biggest first, for the expansion
+plan.
   $ cut -d, -f3 customers.csv | tail -n +2 | sort | uniq -c | sort -rn
   You should see:
     5 Springfield
@@ -91,19 +123,31 @@ GOAL: Dig through a fake app log and customer list like a real admin.
     2 Lakeside
     2 Fairview
 
---- Step 13: Find the busiest IP addresses in the web log.
+--- Step 13 ----------------------------------------
+Security heads-up: someone may be hammering the login page. Find the
+busiest IP addresses in the web log.
   $ awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -3
   You should see:
     4 10.0.0.5
     3 192.168.1.20
     2 10.0.0.7
 
---- Step 14: Page through a file with less. Search, then quit.
+--- Step 14 ----------------------------------------
+Before you hit send, read through the whole app log in a pager and
+jump straight to the errors.
   $ less app.log
   You should see:
     Type /ERROR then Enter to jump to it. Press n for next. Press q to quit.
 
 STUCK?
-  * awk prints weird stuff: Use single quotes around the awk program: '...'. Double quotes let the shell eat $2.
-  * uniq didn't remove duplicates: They weren't next to each other. Pipe through sort first.
-  * Stuck inside less: Press q.
+  * awk prints weird stuff
+      Use single quotes around the awk program: '...'. Double quotes let
+      the shell eat $2.
+  * uniq didn't remove duplicates
+      They weren't next to each other. Pipe through sort first.
+  * Stuck inside less
+      Press q.
+
+DONE? Ticket PP-102 closed.
+  Report sent. You just did log triage, config review and customer
+  analysis using only text tools.
