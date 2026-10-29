@@ -67,6 +67,10 @@ errors.txt.
   You should see:
     Nothing on screen at first. Then:
     ls: cannot access 'nosuchfile': No such file or directory
+  Why:
+    nosuchfile doesn't exist on purpose, so ls makes an error. 2>
+    catches that error in the file instead of the screen. Seeing it
+    after cat means it worked.
   What each part means:
     ls                          = List files
     2>                          = save only errors to a file
